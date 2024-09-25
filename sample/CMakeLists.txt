@@ -1,0 +1,3 @@
+add_executable(sample_api_cv sample_api_cv.cpp command_parser/command_parser.cpp)
+
+target_link_libraries(sample_api_cv aisdk_api aisdk_core aisdk_registry aisdk_common)
