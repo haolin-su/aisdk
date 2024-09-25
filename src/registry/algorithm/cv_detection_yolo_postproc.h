@@ -15,14 +15,14 @@ public:
     const std::string& GetName() const { return name_; }
 
     // 初始化
-    bool Init() override ;
+    int Init(std::string config) override ;
 
     // 处理数据
-    bool Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) override ;
-    bool Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) override ;
+    int Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) override ;
+    int Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) override ;
 
     // 释放资源
-    bool Finalize() override ;
+    int Finalize() override ;
 
     // 获取输入输出节点的数量
     int GetInputSize() override ;

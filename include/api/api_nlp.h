@@ -23,10 +23,11 @@
 #include <vector>
 #include <functional>
 #include "model/model_nlp.h"
+#include "result.h"
 
 namespace aisdk {   
 
-using InferAsyncCallback = std::function<void(std::string& tag, int status, std::string& response)>;
+using NLPInferAsyncCallback = std::function<void(std::string& tag, int status, result::ResultNLP_Text& result)>;
 
 
 class NLPAPI {
@@ -62,16 +63,25 @@ public:
     // 返回值：0表示成功，其他表示失败
     // int InferAsyncCallback(std::string& tag, int status, std::string& response);
 
+    // 文本生成同步接口
+    // 功能说明：根据输入的text进行文本生成，同步执行
+    // 参数说明：
+    //  text：输入文本, 必须传入
+    //  timeout：超时时间，单位：毫秒，非必须，可传入0
+    //  tag：任务标签，非必须
+    // 返回值：生成的文本，失败返回""
+    std::string GenerateSync(std::vector<int>& text, result::ResultNLP_Text result, int timeout = 0, const std::string tag = "");
+
 
     // 文本生成
     // 功能说明：根据输入的text进行文本生成，异步执行，需要配合回调函数和WaitTaskDone函数使用
     // 参数说明：
     //  text：输入文本, 必须传入
-    //  cb：回调函数, 非必须，可传入nullptr
+    //  cb：回调函数, 必须传入
     //  timeout：超时时间，单位：毫秒，非必须，可传入0
     //  tag：任务标签，非必须
     // 返回值：0表示成功，其他表示失败
-    int Generate(std::vector<int>& text, InferAsyncCallback cb, int timeout = 0, const std::string tag = "");
+    int Generate(std::vector<int>& text, NLPInferAsyncCallback cb, int timeout = 0, const std::string tag = "");
 
     // 获取模型信息
     // 功能说明：获取模型信息

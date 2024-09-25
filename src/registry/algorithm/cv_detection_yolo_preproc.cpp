@@ -4,13 +4,13 @@
 
 using namespace aisdk;
 // 初始化
-bool YoloPreProcNode::Init()
+int YoloPreProcNode::Init(std::string config)
 {
     return true;
 }
 
 // 处理数据
-bool YoloPreProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
+int YoloPreProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
 {
     cv::Mat input_mat, output_mat;
     tensor2mat(input, input_mat);
@@ -22,7 +22,7 @@ bool YoloPreProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Te
     return true;
 }
 
-bool YoloPreProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 
+int YoloPreProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 
 {
     for (int i = 0; i < inputs.size(); i++)
     {
@@ -41,7 +41,7 @@ bool YoloPreProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std:
 }
 
 // 释放资源
-bool YoloPreProcNode::Finalize() 
+int YoloPreProcNode::Finalize() 
 {
     return true;
 }

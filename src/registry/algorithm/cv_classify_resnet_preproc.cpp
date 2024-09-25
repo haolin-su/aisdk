@@ -4,13 +4,15 @@
 
 using namespace aisdk;
 // 初始化
-bool ResnetPreProcNode::Init()
+int ResnetPreProcNode::Init(std::string config)
 {
+    // TODO: 解析配置
+
     return true;
 }
 
 // 处理数据
-bool ResnetPreProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
+int ResnetPreProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
 {
     cv::Mat input_mat, output_mat;
     tensor2mat(input, input_mat);
@@ -21,7 +23,7 @@ bool ResnetPreProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<
 
     return true;
 }
-bool ResnetPreProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 
+int ResnetPreProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 
 {
     for (int i = 0; i < inputs.size(); i++)
     {
@@ -39,7 +41,7 @@ bool ResnetPreProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, st
 }
 
 // 释放资源
-bool ResnetPreProcNode::Finalize() 
+int ResnetPreProcNode::Finalize() 
 {
     return true;
 }

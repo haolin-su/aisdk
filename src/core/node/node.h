@@ -30,14 +30,14 @@ public:
     const std::string& GetName() const { return name_; }
 
     // 初始化
-    virtual bool Init() = 0;
+    virtual int Init(std::string config) = 0;
 
     // 处理数据
-    virtual bool Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) = 0;
-    virtual bool Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) = 0;
+    virtual int Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) = 0;
+    virtual int Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) = 0;
 
     // 释放资源
-    virtual bool Finalize() = 0;
+    virtual int Finalize() = 0;
 
     // 获取输入输出节点的数量
     virtual int GetInputSize() = 0;

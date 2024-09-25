@@ -42,6 +42,12 @@ int NLPAPI::Release() {
 // }
 
 
+std::string GenerateSync(std::vector<int>& text, result::ResultNLP_Text result, int timeout, const std::string tag)
+{
+    return "";
+}
+
+
 // 文本生成
 // 功能说明：根据输入的text进行文本生成，异步执行，需要配合回调函数和WaitTaskDone函数使用
 // 参数说明：
@@ -50,7 +56,7 @@ int NLPAPI::Release() {
 //  timeout：超时时间，单位：毫秒，非必须，可传入0
 //  tag：任务标签，非必须
 // 返回值：0表示成功，其他表示失败
-int NLPAPI::Generate(std::vector<int>& text, InferAsyncCallback cb, int timeout, const std::string tag) {
+int NLPAPI::Generate(std::vector<int>& text, NLPInferAsyncCallback cb, int timeout, const std::string tag) {
     return 0;
 }
 

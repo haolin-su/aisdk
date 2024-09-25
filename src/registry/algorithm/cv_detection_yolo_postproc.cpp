@@ -3,13 +3,13 @@
 
 using namespace aisdk;
 // 初始化
-bool YoloPostProcNode::Init()
+int YoloPostProcNode::Init(std::string config)
 {
     return true;
 }
 
 // 处理数据
-bool YoloPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
+int YoloPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
 {
     // cv::Mat input_mat = cv::Mat(input->GetData<float>(), input->GetShape());
     // cv::Mat output_mat;
@@ -20,7 +20,7 @@ bool YoloPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<T
     return true;
 }
 
-bool YoloPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 
+int YoloPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 
 {
     // cv::Mat input_mat = cv::Mat(inputs[0]->GetData<float>(), inputs[0]->GetShape());
     // cv::Mat output_mat;
@@ -32,7 +32,7 @@ bool YoloPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std
 }
 
 // 释放资源
-bool YoloPostProcNode::Finalize() 
+int YoloPostProcNode::Finalize() 
 {
     return true;
 }

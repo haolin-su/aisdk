@@ -3,13 +3,13 @@
 
 using namespace aisdk;
 // 初始化
-bool ResnetPostProcNode::Init()
+int ResnetPostProcNode::Init(std::string config)
 {
     return true;
 }
 
 // 处理数据
-bool ResnetPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
+int ResnetPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
 {
     if (input == nullptr || output == nullptr)
     {
@@ -42,13 +42,13 @@ bool ResnetPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr
 
     return true;
 }
-bool ResnetPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 
+int ResnetPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 
 {
     return true;
 }
 
 // 释放资源
-bool ResnetPostProcNode::Finalize() 
+int ResnetPostProcNode::Finalize() 
 {
     return true;
 }

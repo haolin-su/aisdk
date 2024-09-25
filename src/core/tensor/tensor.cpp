@@ -73,6 +73,26 @@ int Tensor::SetDataType(const DataType& data_type) {
     return 0;
 }
 
+int Tensor::GetLayout(Layout& layout) {
+    layout = layout_;
+    return 0;
+}
+
+int Tensor::SetLayout(const Layout& layout) {
+    layout_ = layout;
+    return 0;
+}
+
+int Tensor::GetMemory(std::shared_ptr<IMemory>& mem_ptr) {
+    mem_ptr = mem_ptr_;
+    return 0;
+}
+
+int Tensor::SetMemory(const std::shared_ptr<IMemory>& mem_ptr) {
+    mem_ptr_ = mem_ptr;
+    return 0;
+}
+
 namespace aisdk {
     
 DataType StringToDataType(const std::string& dtype) 

@@ -45,6 +45,30 @@ int MultiModalAPI::Release()
 //     return;
 // }
 
+// 同步生成接口
+// 功能说明：根据输入的text和img进行图像生成，同步执行
+// 参数说明：
+//  text：输入文本，必须传入
+//  img_path：输入图像路径，非必须，可传入""
+//  result：任务响应，非必须，从中获取值
+// 返回值：0表示成功，其他表示失败
+int MultiModalAPI::Generate(std::string& text, std::string& img_path, result::ResultMultimodal& result)
+{
+    return 0;
+}
+
+// 同步生成接口
+// 功能说明：根据输入的text和img进行图像生成，同步执行
+// 参数说明：
+//  text：输入文本，必须传入
+//  img：输入图像结构体，非必须，可传入""
+//  result：任务响应，非必须，从中获取值
+// 返回值：0表示成功，其他表示失败
+int MultiModalAPI::Generate(std::string& text, const FIBO_CV_Img& img, result::ResultMultimodal& result)
+{
+    return 0;
+}
+
 // 异步生成接口
 // 功能说明：根据输入的text和img进行图像生成，异步执行，需要配合回调函数和WaitTaskDone函数使用
 // 参数说明：
@@ -54,7 +78,7 @@ int MultiModalAPI::Release()
 //  timeout：超时时间，单位：毫秒，非必须，可传入0
 //  tag：任务标签，非必须
 // 返回值：0表示成功，其他表示失败
-int MultiModalAPI::Generate(std::string& text, std::string& img_path, InferAsyncCallback cb, int timeout, const std::string tag)
+int MultiModalAPI::Generate(std::string& text, std::string& img_path, MultimodalInferAsyncCallback cb, int timeout, const std::string tag)
 {
     return 0;
 }
@@ -68,7 +92,7 @@ int MultiModalAPI::Generate(std::string& text, std::string& img_path, InferAsync
 //  timeout：超时时间，单位：毫秒，非必须，可传入0
 //  tag：任务标签，非必须
 // 返回值：0表示成功，其他表示失败
-int MultiModalAPI::Generate(std::string& text, const FIBO_CV_Img& img, InferAsyncCallback cb, int timeout, const std::string tag)
+int MultiModalAPI::Generate(std::string& text, const FIBO_CV_Img& img, MultimodalInferAsyncCallback cb, int timeout, const std::string tag)
 {
     return 0;
 }

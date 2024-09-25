@@ -11,33 +11,37 @@ public:
     SnpeModel(const std::string& model_path);
     ~SnpeModel();
 
-    virtual bool Init();
-
-    virtual bool Load(const std::string& model_path);
-    virtual bool Unload();
+    virtual int Load(const std::string& model_path) override;
+    virtual int Unload() override;
 
     // 获取模型输入输出的个数
-    virtual bool GetInputCount(int& input_count);
-    virtual bool GetOutputCount(int& output_count);
+    virtual int GetInputCount(int& input_count) override;
+    virtual int GetOutputCount(int& output_count) override;
 
     // 获取模型输入输出的shape
-    virtual bool GetInputShape(std::vector<TensorShape>& input_shapes);
-    virtual bool GetOutputShape(std::vector<TensorShape>& output_shapes);
+    virtual int GetInputShape(std::vector<TensorShape>& input_shapes) override;
+    virtual int GetOutputShape(std::vector<TensorShape>& output_shapes) override;
 
     // 获取模型输入输出的dtype
-    virtual bool GetInputDtype(std::vector<DataType>& input_dtypes);
-    virtual bool GetOutputDtype(std::vector<DataType>& output_dtypes);
+    virtual int GetInputDtype(std::vector<DataType>& input_dtypes) override;
+    virtual int GetOutputDtype(std::vector<DataType>& output_dtypes) override;
 
     // 获取模型输入输出的layout
-    virtual bool GetInputLayout(std::vector<Layout>& input_layouts);
-    virtual bool GetOutputLayout(std::vector<Layout>& output_layouts);
+    virtual int GetInputLayout(std::vector<Layout>& input_layouts) override;
+    virtual int GetOutputLayout(std::vector<Layout>& output_layouts) override;
 
     // 获取模型输入输出的name
-    virtual bool GetInputName(std::vector<std::string>& input_names);
-    virtual bool GetOutputName(std::vector<std::string>& output_names);
+    virtual int GetInputName(std::vector<std::string>& input_names) override;
+    virtual int GetOutputName(std::vector<std::string>& output_names) override;
+
+    // 获取模型的输入输出的tensor
+    virtual int GetInputTensor(std::vector<Tensor>& input_tensors) override;
+    virtual int GetOutputTensor(std::vector<Tensor>& output_tensors) override;
 
     // 获取模型的key
-    virtual bool GetKey(std::string& key);
+    virtual int GetKey(std::string& key) override;
+
+    any GetModel() override;
     
 private:
     std::shared_ptr<SnpeModelPrivate> priv_;

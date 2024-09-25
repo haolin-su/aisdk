@@ -41,9 +41,12 @@ enum ErrorCode {
     ERROR_CODE_CV_INVALID_RESULT    = 204, // CV无效的结果
 
     ERROR_CODE_NLP_INIT_FAILED      = 300, // NLP初始化失败
-    ERROR_CODE_NLP_INVALID_PARAM    = 301, // NLP参数错误
-    ERROR_CODE_NLP_INVALID_TEXT     = 302, // NLP无效的文本
-    ERROR_CODE_NLP_INVALID_RESPONSE = 303, // NLP无效的响应
+    ERROR_CODE_NLP_INIT_ALREADY     = 301, // NLP已经初始化
+    ERROR_CODE_NLP_INVALID_PARAM    = 302, // NLP参数错误
+    ERROR_CODE_NLP_INVALID_TEXT     = 303, // NLP无效的文本
+    ERROR_CODE_NLP_INVALID_RESPONSE = 304, // NLP无效的响应
+    ERROR_CODE_FACE_NO_INIT         = 305, // NLP未初始化
+    ERROR_CODE_NLP_LONG_TEXT        = 306, // NLP文本过长
 
     ERROR_CODE_AUDIO_INIT_FAILED    = 400, // Audio初始化失败
     ERROR_CODE_AUDIO_INVALID_PARAM  = 401, // Audio参数错误
@@ -52,6 +55,7 @@ enum ErrorCode {
 
     ERROR_CODE_RESOURCE_INIT_FAILED     = 500, // 资源初始化失败
     ERROR_CODE_RESOURCE_INVALID_PARAM   = 501, // 资源参数错误
+    ERROR_CODE_RESOURCE_NO_MEMORY       = 502, // 内存不足
     
     ERROR_CODE_OTHER_ERROR           = 1000, // 其他错误
 };

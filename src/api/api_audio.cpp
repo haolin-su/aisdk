@@ -36,7 +36,7 @@ int Audio::Release()
 //  audio 可以传wav 文件路径或音频原始数组, 传文件则在transcribe 加载音频数据,传音频原始数据则由用户给定
 //  result 是转录的结果
 // 返回值：错误码
-int Audio::transcribe(FIBO_Audio audio , aisdk::InferAsyncCallback cb, int timeout, const std::string tag)
+int Audio::transcribe(FIBO_Audio audio , AudioInferAsyncCallback cb, int timeout, const std::string tag)
 {
     return 0;
 }

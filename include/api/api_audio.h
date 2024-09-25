@@ -28,18 +28,7 @@
 namespace aisdk
 {
 
-typedef struct {
-    // 翻译token            
-    std::vector<std::string> speech_tokens; 
-    // 翻译开始时间，单位：微妙，取值范围：[0, 1000000]
-    int64_t speech_start; 
-    // 翻译结束时间，单位：微妙，取值范围：[0, 1000000]
-    int64_t speech_end; 
-    // 翻译置信度，取值范围：[0, 1]
-    float speech_confence; 
-}ResultNLP_Audio_Transalte;
-
-typedef std::function<void(std::string& tag, int status, ResultNLP_Audio_Transalte &response, std::string metrice_str)> InferAsyncCallback;    
+using AudioInferAsyncCallback = std::function<void(std::string& tag, int status, result::ResultNLP_Audio_Transalte &response, std::string metrice_str)>;
 
 class Audio
 {
@@ -69,13 +58,21 @@ public:
     // int InferAsyncCallback(std::string& tag, int status, result::nlp::ResultNLP_Audio_Transalte &response, std::string metrice_str);
 
 
+    // 音频转文本同步
+    // 功能说明：根据输入的wav音频文件进行音频转文本，同步执行
+    // 参数说明：
+    //  audio 可以传wav 文件路径或音频原始数组, 传文件则在transcribe 加载音频数据,传音频原始数据则由用户给定
+    //  result 是转录的结果
+    // 返回值：错误码
+    int transcribe(FIBO_Audio audio, result::ResultNLP_Audio_Transalte &result);
+
     // 音频翻译
     // 功能说明：根据输入的wav音频文件进行音频翻译，异步执行，需要配合回调函数和WaitTaskDone函数使用
     // 参数说明：
     //  audio 可以传wav 文件路径或音频原始数组, 传文件则在transcribe 加载音频数据,传音频原始数据则由用户给定
     //  result 是转录的结果
     // 返回值：错误码
-    int transcribe(FIBO_Audio audio , InferAsyncCallback cb, int timeout = 0, const std::string tag = "");
+    int transcribe(FIBO_Audio audio , AudioInferAsyncCallback cb, int timeout = 0, const std::string tag = "");
 
     // 获取模型信息
     // 功能说明：获取模型信息

@@ -50,6 +50,11 @@ public:
     // 设置数据类型
     virtual int SetDataType(const DataType& data_type);
 
+    // 获取通道数排布
+    virtual int GetLayout(Layout& layout);
+    // 设置通道数排布
+    virtual int SetLayout(const Layout& layout);
+
     // 获取数据大小
     virtual int GetDataSize(size_t& data_size);
     // 设置数据大小
@@ -60,6 +65,16 @@ public:
     // 设置数据指针
     virtual int SetDataPtr(void* data_ptr);
 
+    // 获取内存管理器
+    virtual int GetMemory(IMemoryPtr& mem_ptr);
+    // 设置内存管理器
+    virtual int SetMemory(const IMemoryPtr& mem_ptr);
+
+    bool IsData()
+    {
+        return (data_ptr_ != nullptr) ? true : false;
+    }
+
     // 元数据
     MetaDataPtr meta_data_ptr_;
 
@@ -68,7 +83,7 @@ private:
 
     TensorShape shape_;    // shape
     DataType dtype_;       // dtype
-    // Layout layout_;        // layout
+    Layout layout_;        // layout
     size_t data_size_;     // data size
     void* data_ptr_;       // data pointer
 

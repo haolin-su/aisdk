@@ -9,7 +9,10 @@
 #include <mutex>
 #include <condition_variable>
 
-#include "../utils.h"
+#include "core/utils.h"
+#include "core/util/any.h"
+#include "core/tensor/tensor.h"
+
 namespace aisdk {
 
 class Model {
@@ -20,35 +23,43 @@ public:
 
     const std::string& GetName() const { return name_; }
 
-    virtual bool Load(const std::string& model_path) = 0;
-    virtual bool Unload() = 0;
+    virtual int Load(const std::string& model_path) = 0;
+    virtual int Unload() = 0;
 
     // 获取模型输入输出的个数
-    virtual bool GetInputCount(int& input_count) = 0;
-    virtual bool GetOutputCount(int& output_count) = 0;
+    virtual int GetInputCount(int& input_count) = 0;
+    virtual int GetOutputCount(int& output_count) = 0;
 
     // 获取模型输入输出的shape
-    virtual bool GetInputShape(std::vector<TensorShape>& input_shapes) = 0;
-    virtual bool GetOutputShape(std::vector<TensorShape>& output_shapes) = 0;
+    virtual int GetInputShape(std::vector<TensorShape>& input_shapes) = 0;
+    virtual int GetOutputShape(std::vector<TensorShape>& output_shapes) = 0;
 
     // 获取模型输入输出的dtype
-    virtual bool GetInputDtype(std::vector<DataType>& input_dtypes) = 0;
-    virtual bool GetOutputDtype(std::vector<DataType>& output_dtypes) = 0;
+    virtual int GetInputDtype(std::vector<DataType>& input_dtypes) = 0;
+    virtual int GetOutputDtype(std::vector<DataType>& output_dtypes) = 0;
 
     // 获取模型输入输出的layout
-    virtual bool GetInputLayout(std::vector<Layout>& input_layouts) = 0;
-    virtual bool GetOutputLayout(std::vector<Layout>& output_layouts) = 0;
+    virtual int GetInputLayout(std::vector<Layout>& input_layouts) = 0;
+    virtual int GetOutputLayout(std::vector<Layout>& output_layouts) = 0;
 
     // 获取模型输入输出的name
-    virtual bool GetInputName(std::vector<std::string>& input_names) = 0;
-    virtual bool GetOutputName(std::vector<std::string>& output_names) = 0;
+    virtual int GetInputName(std::vector<std::string>& input_names) = 0;
+    virtual int GetOutputName(std::vector<std::string>& output_names) = 0;
+
+    // 获取模型的输入输出的tensor
+    virtual int GetInputTensor(std::vector<Tensor>& input_tensors) = 0;
+    virtual int GetOutputTensor(std::vector<Tensor>& output_tensors) = 0;
 
     // 获取模型的key
-    virtual bool GetKey(std::string& key) = 0;
+    virtual int GetKey(std::string& key) = 0;
+
+    virtual any GetModel() = 0;
     
 private:
     std::string name_;
 };
+
+using ModelPtr = std::shared_ptr<Model>;
 
 class ModelManager {
 public:

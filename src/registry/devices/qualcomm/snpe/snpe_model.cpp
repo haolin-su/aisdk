@@ -92,7 +92,7 @@ using namespace aisdk;
 //             {
 //                 std::vector<std::unique_ptr<zdl::DlSystem::Tensor>> inputTensors(inputTensorNames.size());
 //                 zdl::DlSystem::TensorMap inputTensorMap;
-//                 bool inputLoadStatus = false;
+//                 int inputLoadStatus = false;
 //                 // Load input/output buffers with TensorMap
 //                 std::tie(inputTensorMap, inputLoadStatus) = loadMultipleInput(snpe, inputs[i], inputTensorNames, inputTensors);
 //                 if(!inputLoadStatus)
@@ -124,20 +124,129 @@ public:
     SnpeModelPrivate();
     ~SnpeModelPrivate();
 
-    bool Init();
-    bool Load(const std::string& model_path);
-    bool Unload();
+    int Init();
+    int Load(const std::string& model_path);
+    int Unload();
 
-    int GetInputCount();
-    int GetOutputCount();
-    std::vector<TensorShape> GetInputShape();
-    std::vector<TensorShape> GetOutputShape();
-    std::vector<DataType> GetInputDtype();
-    std::vector<DataType> GetOutputDtype();
-    std::vector<Layout> GetInputLayout();
-    std::vector<Layout> GetOutputLayout();
-    std::vector<std::string> GetInputName();
-    std::vector<std::string> GetOutputName();
+    int GetInputCount()
+    {
+        return input_tensors_.size();
+    }
+    int GetOutputCount()
+    {
+        return output_tensors_.size();
+    }
+    std::vector<TensorShape> GetInputShape()
+    {
+        std::vector<TensorShape> input_shapes;
+        for (auto& input_tensor : input_tensors_) {
+            TensorShape input_shape;
+            input_tensor.GetShape(input_shape);
+            input_shapes.push_back(input_shape);
+        }
+
+        return input_shapes;
+    }
+
+    std::vector<TensorShape> GetOutputShape()
+    {
+        std::vector<TensorShape> output_shapes;
+        for (auto& output_tensor : output_tensors_) {
+            TensorShape output_shape;
+            output_tensor.GetShape(output_shape);
+            output_shapes.push_back(output_shape);
+        }
+
+        return output_shapes;
+    }
+
+    std::vector<DataType> GetInputDtype()
+    {
+        std::vector<DataType> data_types;
+        for (auto& input_tensor : input_tensors_) {
+            DataType data_type;
+            input_tensor.GetDataType(data_type);
+            data_types.push_back(data_type);
+        }
+
+        return data_types;
+    }
+
+    std::vector<DataType> GetOutputDtype()
+    {
+        std::vector<DataType> data_types;
+        for (auto& output_tensor : output_tensors_) {
+            DataType data_type;
+            output_tensor.GetDataType(data_type);
+            data_types.push_back(data_type);
+        }
+
+        return data_types;
+    }
+    
+    std::vector<Layout> GetInputLayout()
+    {
+        std::vector<Layout> input_layouts;
+        for (auto& input_tensor : input_tensors_) {
+            Layout input_layout;
+            input_tensor.GetLayout(input_layout);
+            input_layouts.push_back(input_layout);
+        }
+
+        return input_layouts;
+    }
+
+    std::vector<Layout> GetOutputLayout()
+    {
+        std::vector<Layout> output_layouts;
+        for (auto& output_tensor : output_tensors_) {
+            Layout output_layout;
+            output_tensor.GetLayout(output_layout);
+            output_layouts.push_back(output_layout);
+        }
+
+        return output_layouts;
+    }
+
+    std::vector<std::string> GetInputName()
+    {
+        std::vector<std::string> input_names;
+        for (auto& input_tensor : input_tensors_) {
+            input_names.push_back(input_tensor.GetName());
+        }
+
+        return input_names;
+    }
+
+    std::vector<std::string> GetOutputName()
+    {
+        std::vector<std::string> output_names;
+        for (auto& output_tensor : output_tensors_) {
+            output_names.push_back(output_tensor.GetName());
+        }
+
+        return output_names;
+    }
+
+    std::vector<Tensor> GetInputTensors()
+    {
+        return input_tensors_;
+    }
+
+    std::vector<Tensor> GetOutputTensors()
+    {
+        return output_tensors_; 
+    }
+
+    std::string GetKey()
+    {
+        return "";
+    }
+
+    std::shared_ptr<zdl::SNPE::SNPE> GetModel()
+    {
+        return std::move(snpe_);
+    }
 
 private:
     std::unique_ptr<zdl::DlContainer::IDlContainer> container_;
@@ -159,7 +268,8 @@ SnpeModelPrivate::~SnpeModelPrivate()
 }
 
 
-bool SnpeModelPrivate::Init()
+
+int SnpeModelPrivate::Init()
 {
     zdl::SNPE::SNPEFactory::initializeLogging(zdl::DlSystem::LogLevel_t::LOG_ERROR, "./Log");
 
@@ -186,7 +296,7 @@ static DataType elementType2DataType(Snpe_UserBufferEncoding_ElementType_t elemn
     return aisdk::DataType::AISDK_DATA_TYPE_FLOAT32;
 }
 
-bool SnpeModelPrivate::Load(const std::string& model_path)
+int SnpeModelPrivate::Load(const std::string& model_path)
 {
     std::unique_ptr<zdl::DlContainer::IDlContainer> container = zdl::DlContainer::IDlContainer::open(zdl::DlSystem::String(model_path.c_str()));
     if (container == nullptr)
@@ -239,13 +349,38 @@ bool SnpeModelPrivate::Load(const std::string& model_path)
         input_tensors_.emplace_back(input_tensor);
     }
 
+    // 获取多个output的名称
+    DlSystem::StringList output_name_list = snpe->getOutputTensorNames();
+    for (size_t i = 0; i < output_name_list.size(); ++i) {
+        const char* name = output_name_list.at(i);
+        // get attributes of buffer by name
+        DlSystem::IBufferAttributes* bufferAttributesOptHandle = snpe->getInputOutputBufferAttributes(name);
+        if (nullptr == bufferAttributesOptHandle) {
+            return false;
+        }
+
+        DlSystem::TensorShape tensor_shape = bufferAttributesOptHandle->getDims();
+
+        aisdk::TensorShape shape;
+        shape.dim = tensor_shape.rank();
+        std::vector<size_t> tensorShape;
+        for (size_t j = 0; j < shape.dim; j++) {
+            shape.shape.push_back(tensor_shape[j]);
+        }
+
+        Snpe_UserBufferEncoding_ElementType_t elemnet_type = Snpe_IBufferAttributes_GetEncodingType(bufferAttributesOptHandle);
+        DataType data_type = elementType2DataType(elemnet_type);
+
+        Tensor output_tensor(std::string(name), shape, data_type);
+        output_tensors_.emplace_back(output_tensor);
+    }
 
 
     return true;
 }
 
 
-bool SnpeModelPrivate::Unload()
+int SnpeModelPrivate::Unload()
 {
     return true;
 }
@@ -253,6 +388,7 @@ bool SnpeModelPrivate::Unload()
 SnpeModel::SnpeModel(const std::string& model_path)
 {
     priv_ = std::shared_ptr<SnpeModelPrivate>(new SnpeModelPrivate());
+    priv_->Init();
 }
 
 SnpeModel::~SnpeModel()
@@ -260,79 +396,101 @@ SnpeModel::~SnpeModel()
     priv_->Unload();
 }
 
-bool SnpeModel::Init()
-{   
-    return priv_->Init();
-}
-
-bool SnpeModel::Load(const std::string& model_path)
+int SnpeModel::Load(const std::string& model_path)
 {
     return priv_->Load(model_path);
 }
 
-bool SnpeModel::Unload()
+int SnpeModel::Unload()
 {
     return priv_->Unload();
 }
 
 // 获取模型输入输出的个数
-bool SnpeModel::GetInputCount(int& input_count)
+int SnpeModel::GetInputCount(int& input_count)
 {
+    input_count = priv_->GetInputCount();
     return true;
 }
 
-bool SnpeModel::GetOutputCount(int& output_count)
+int SnpeModel::GetOutputCount(int& output_count)
 {
+    output_count = priv_->GetOutputCount();
     return true;
 }
 
 // 获取模型输入输出的shape
-bool SnpeModel::GetInputShape(std::vector<TensorShape>& input_shapes)
+int SnpeModel::GetInputShape(std::vector<TensorShape>& input_shapes)
 {
+    input_shapes = priv_->GetInputShape();
     return true;
 }
 
-bool SnpeModel::GetOutputShape(std::vector<TensorShape>& output_shapes)
+int SnpeModel::GetOutputShape(std::vector<TensorShape>& output_shapes)
 {
+    output_shapes = priv_->GetOutputShape();
     return true;
 }
 
 // 获取模型输入输出的dtype
-bool SnpeModel::GetInputDtype(std::vector<DataType>& input_dtypes)
+int SnpeModel::GetInputDtype(std::vector<DataType>& input_dtypes)
 {
+    input_dtypes = priv_->GetInputDtype();
     return true;
 }
 
-bool SnpeModel::GetOutputDtype(std::vector<DataType>& output_dtypes)
+int SnpeModel::GetOutputDtype(std::vector<DataType>& output_dtypes)
 {
+    output_dtypes = priv_->GetOutputDtype();
     return true;
 }
 
 // 获取模型输入输出的layout
-bool SnpeModel::GetInputLayout(std::vector<Layout>& input_layouts)
+int SnpeModel::GetInputLayout(std::vector<Layout>& input_layouts)
 {
+    input_layouts = priv_->GetInputLayout();
     return true;
 }
 
-bool SnpeModel::GetOutputLayout(std::vector<Layout>& output_layouts)
+int SnpeModel::GetOutputLayout(std::vector<Layout>& output_layouts)
 {
+    output_layouts = priv_->GetOutputLayout();
     return true;
 }
 
 // 获取模型输入输出的name
-bool SnpeModel::GetInputName(std::vector<std::string>& input_names)
+int SnpeModel::GetInputName(std::vector<std::string>& input_names)
 {
+    input_names = priv_->GetInputName();
     return true;
 }
 
-bool SnpeModel::GetOutputName(std::vector<std::string>& output_names)
+int SnpeModel::GetOutputName(std::vector<std::string>& output_names)
 {
+    output_names = priv_->GetOutputName();
     return true;
+}
+
+int SnpeModel::GetInputTensor(std::vector<Tensor>& input_tensors) 
+{
+    input_tensors = priv_->GetInputTensors();
+    return 0;
+}
+
+int SnpeModel::GetOutputTensor(std::vector<Tensor>& output_tensors)
+{
+    output_tensors = priv_->GetOutputTensors();
+    return 0;
 }
 
 // 获取模型的key
-bool SnpeModel::GetKey(std::string& key)
+int SnpeModel::GetKey(std::string& key)
 {
+    key = priv_->GetKey();
     return true;
 }
 
+any SnpeModel::GetModel()
+{
+    return priv_->GetModel();
+}

@@ -271,7 +271,7 @@ typedef struct {
     int64_t speech_end; 
     // 翻译置信度，取值范围：[0, 1]
     float speech_confence; 
-} ResultNLP_Audioransalte;
+} ResultNLP_Audio_Transalte;
 
 // ------------------------------多模态结果------------------------------
 typedef struct {
@@ -280,7 +280,7 @@ typedef struct {
     // 文本结果
     ResultNLP_Text text;
     // 音频翻译结果
-    ResultNLP_Audioransalte audioransalte;
+    ResultNLP_Audio_Transalte audioransalte;
 } ResultMultimodal;
 
 // ------------------------------总结果结构体------------------------------
@@ -290,7 +290,7 @@ typedef struct {
     // 文本结果
     aisdk::result::ResultNLP_Text result_nlp_text_;
     // 音频翻译结果
-    aisdk::result::ResultNLP_Audioransalte result_nlp_audioransalte_;
+    aisdk::result::ResultNLP_Audio_Transalte result_nlp_audioransalte_;
     // 多模态结果
     aisdk::result::ResultMultimodal result_multimodal_;
 } Result;
