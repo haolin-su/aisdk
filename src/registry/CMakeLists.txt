@@ -1,7 +1,7 @@
 # include_directories(${CMAKE_SOURCE_DIR}/third_party/re2/include)
 
 # 搜索当前目录下的所有.cpp文件，已及递归目录下的所有.cpp文件
-file(GLOB_RECURSE REGISTRY_SRC_FILES "*.cpp")
+file(GLOB_RECURSE REGISTRY_SRC_FILES "*.cc")
 
 add_library(aisdk_registry SHARED ${REGISTRY_SRC_FILES})
 

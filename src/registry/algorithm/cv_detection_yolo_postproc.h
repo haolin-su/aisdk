@@ -1,7 +1,8 @@
-#ifndef FIBO_CV_DETECTION_YOLO_PREPROC_H_
-#define FIBO_CV_DETECTION_YOLO_PREPROC_H_
+#ifndef FIBO_CV_DETECTION_YOLO_POSTPROC_H_
+#define FIBO_CV_DETECTION_YOLO_POSTPROC_H_
 
 #include "core/node/node.h"
+#include "result.h"
 
 namespace aisdk {
 

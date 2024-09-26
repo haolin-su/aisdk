@@ -1,4 +1,4 @@
-file(GLOB_RECURSE COMMON_SRC_FILES "*.cpp")
+file(GLOB_RECURSE COMMON_SRC_FILES "*.cc")
 
 add_library(aisdk_common SHARED ${COMMON_SRC_FILES})
 

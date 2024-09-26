@@ -20872,7 +20872,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     `from_json()` method.
 
     The function is equivalent to executing
-    @code {.cpp}
+    @code {.cc}
     ValueType ret;
     JSONSerializer<ValueType>::from_json(*this, ret);
     return ret;
@@ -20923,7 +20923,7 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
     `from_json()` method.
 
     The function is equivalent to executing
-    @code {.cpp}
+    @code {.cc}
     return JSONSerializer<ValueType>::from_json(*this);
     @endcode
 

@@ -2,7 +2,6 @@
 #define FIBO_CV_DETECTION_YOLO_PREPROC_H_
 
 #include "core/node/node.h"
-#include "core/node/node.h"
 
 namespace aisdk {
 
