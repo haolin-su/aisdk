@@ -19,7 +19,7 @@ int YoloPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Te
     cv::Mat input_mat, output_mat;
     tensor2mat(input, input_mat);
     tensor2mat(output, output_mat);
-    YoloPostprocOpencv(input_mat, output_mat, 0.5);
+    YoloDetectionPostprocOpencv(input_mat, output_mat, CONFIDENCE_THRESHOLD);
 
     return true;
 }
