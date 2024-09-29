@@ -1,4 +1,5 @@
 #include "preproc_opencv.h"
+#include <iostream>
 
 namespace aisdk{
 

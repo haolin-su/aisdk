@@ -2,7 +2,7 @@
 #define FIBO_CV_DETECTION_YOLO_POSTPROC_H_
 
 #include "core/node/node.h"
-#include "result.h"
+#include "core/tensor/tensor.h"
 
 namespace aisdk {
 

@@ -516,22 +516,27 @@ int load_qnn_function_pointers(QnnFunctionPointers* qnnFunctionPointers, const c
 
 int Init(QnnFunctionPointers* qnnFunctionPointers, Qnn_LogHandle_t &logHandle, 
             Qnn_BackendHandle_t &backendHandle, Qnn_DeviceHandle_t &deviceHandle,
-             Qnn_ContextHandle_t &context, Qnn_GraphHandle_t &graphHandle, 
-             Qnn_ProfileHandle_t &profileBackendHandle, const char* cache_model_file);
+             Qnn_ContextHandle_t &context, QnnContext_Config_t **contextConfigs,
+             Qnn_GraphHandle_t &graphHandle, 
+             GraphInfo_t** &graphsInfo, uint32_t &graphsCount,
+             Qnn_ProfileHandle_t &profileBackendHandle, const char* cache_model_file,
+             const char* dlc_model_file, bool used_cache);
 
-int load_model(QnnFunctionPointers* qnnFunctionPointers, const char* cache_model_file, 
-               Qnn_BackendHandle_t backendHandle, Qnn_DeviceHandle_t deviceHandle, Qnn_ProfileHandle_t &profileBackendHandle,
-               Qnn_GraphHandle_t* graphHandle, 
-               Qnn_ContextHandle_t &context, QnnContext_Config_t **contextConfigs,
-               GraphInfo_t** graphsInfo, uint32_t graphsCount,
-               const char* dlc_model_file = nullptr, bool used_cache = false) ;
+// int load_model(QnnFunctionPointers* qnnFunctionPointers, const char* cache_model_file, 
+//                Qnn_BackendHandle_t backendHandle, Qnn_DeviceHandle_t deviceHandle, Qnn_ProfileHandle_t &profileBackendHandle,
+//                Qnn_GraphHandle_t* graphHandle, 
+//                Qnn_ContextHandle_t &context, QnnContext_Config_t **contextConfigs,
+//                GraphInfo_t** &graphsInfo, uint32_t &graphsCount,
+//                const char* dlc_model_file = nullptr, bool used_cache = false) ;
 
-int ready_tensors(Qnn_Tensor_t* input_tensors, Qnn_Tensor_t* output_tensors,
-                  uint32_t inputSize, uint32_t outputSize,
-                  Qnn_DataType_t input_dataType, Qnn_DataType_t output_dataType,
-                  uint32_t inputDataSize, uint32_t outputDataSize,
-                  Qnn_GraphHandle_t graphHandle, Qnn_ContextHandle_t context,
-                  GraphInfo_t** graphsInfo) ;
+
+int ready_tensors(Qnn_Tensor_t** input_tensors, Qnn_Tensor_t** output_tensors,
+                  uint32_t &inputNum, uint32_t &outputNum,
+                  uint32_t &inputSize, uint32_t &outputSize,
+                  Qnn_DataType_t &input_dataType, Qnn_DataType_t &output_dataType,
+                  uint32_t &inputDataSize, uint32_t &outputDataSize,
+                  Qnn_GraphHandle_t &graphHandle, Qnn_ContextHandle_t &context,
+                  GraphInfo_t** graphsInfo, uint32_t &graphsCount);
 
 int read_input_data(Qnn_Tensor_t* input_tensors, uint32_t inputSize, uint32_t inputDataSize, const char* input_file);
 

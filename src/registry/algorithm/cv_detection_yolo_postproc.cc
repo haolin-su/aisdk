@@ -1,27 +1,69 @@
 #include "cv_detection_yolo_postproc.h"
+
+#include <iostream>
+
+#include "error.h"
 #include "utils/postproc_opencv.h"
 #include "common/tensor_util.h"
+#include "core/tensor/tensor.h"
+#include "result.h"
 
 using namespace aisdk;
 // 初始化
 int YoloPostProcNode::Init(std::string config)
 {
     std::cout << "YoloPostProcNode Init" << std::endl;
+    // Not implemented yet
     return true;
 }
 
 // 处理数据
 int YoloPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
 {
-    // input is the tensor from the yolo inferenced results
-    // output is the tensor for the postprocessed results
-    std::cout << "YoloPostProcNode Process" << std::endl;
-    cv::Mat input_mat, output_mat;
-    tensor2mat(input, input_mat);
-    tensor2mat(output, output_mat);
-    YoloDetectionPostprocOpencv(input_mat, output_mat, CONFIDENCE_THRESHOLD);
+    std::cout << "YoloDectionPostProcNode Process" << std::endl;
 
-    return true;
+    if (input == nullptr || output == nullptr) {
+        return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
+    }
+
+    cv::Mat input_mat, output_mat;
+    if (tensor2mat(input, input_mat) != 0) {
+        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+        
+    }
+    
+    if(YoloDetectionPostprocOpencv(input_mat, output_mat, CONFIDENCE_THRESHOLD) != ErrorCode::ERROR_CODE_OK) {
+        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+    }
+
+    // In case the output_mat is empty, return an empty tensor
+    if (output_mat.empty()) {
+        output->meta_data_ptr_->result_.result_cv_.detect.count = 0;
+        output->meta_data_ptr_->result_.result_cv_.detect.objects.clear(); 
+        return ErrorCode::ERROR_CODE_OK;
+    }
+
+    // 待定：返回tensor或者直接转换成Result的格式
+# if 0
+    if (mat2tensor(output_mat, output) != 0) {
+        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+    }
+#else 
+    output->meta_data_ptr_->result_.result_cv_.detect.count = output_mat.rows;
+    for (int i = 0; i < output_mat.rows; i++) {
+        result::ResultCvDetectObject obj;
+        obj.class_id = output_mat.at<int>(i, 0);
+        obj.score = output_mat.at<float>(i, 1);
+        obj.bbox.x = output_mat.at<float>(i, 2);
+        obj.bbox.y = output_mat.at<float>(i, 3);
+        obj.bbox.w = output_mat.at<float>(i, 4);
+        obj.bbox.h = output_mat.at<float>(i, 5);
+        output->meta_data_ptr_->result_.result_cv_.detect.objects.push_back(obj);
+    }
+#endif
+    std::cout << "YoloSegPostProcNode Process Done" << std::endl;
+
+    return ErrorCode::ERROR_CODE_OK;
 }
 
 int YoloPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 

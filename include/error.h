@@ -39,6 +39,7 @@ enum ErrorCode {
     ERROR_CODE_CV_INVALID_IMAGE     = 202, // CV无效的图像
     ERROR_CODE_CV_INVALID_MODEL     = 203, // CV无效的模型
     ERROR_CODE_CV_INVALID_RESULT    = 204, // CV无效的结果
+    ERROR_CODE_CV_PROCESS_FAILED    = 205, // CV处理失败
 
     ERROR_CODE_NLP_INIT_FAILED      = 300, // NLP初始化失败
     ERROR_CODE_NLP_INIT_ALREADY     = 301, // NLP已经初始化

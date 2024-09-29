@@ -1,27 +1,45 @@
 #include "cv_segmentation_yolo_postproc.h"
+
+#include <iostream>
+
 #include "utils/postproc_opencv.h"
 #include "common/tensor_util.h"
+#include "result.h"
+#include "error.h"
 
 using namespace aisdk;
 // 初始化
 int YoloSegPostProcNode::Init(std::string config)
 {
     std::cout << "YoloSegPostProcNode Init" << std::endl;
+    // Not implemented yet
     return true;
 }
 
 // 处理数据
 int YoloSegPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
 {
-    // input is the tensor from the yolo inferenced results
-    // output is the tensor for the postprocessed results
     std::cout << "YoloSegPostProcNode Process" << std::endl;
+
+    if (input == nullptr || output == nullptr) {
+        return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
+    }
+
     cv::Mat input_mat, output_mat;
-    tensor2mat(input, input_mat);
-    tensor2mat(output, output_mat);
+    if (tensor2mat(input, input_mat) != 0) {
+        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+        
+    }
+    
     YoloSegmentationPostprocOpencv(input_mat, output_mat, CONFIDENCE_THRESHOLD, NUM_MASKS);
 
-    return true;
+    if (mat2tensor(output_mat, output) != 0) {
+        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+    }
+
+    // TODO: 增加直接转换成Result的代码
+
+    return ErrorCode::ERROR_CODE_OK;
 }
 
 int YoloSegPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 

@@ -1,101 +1,75 @@
 #include "postproc_opencv.h"
 
 #include <vector>
+#include <iostream>
 #include "opencv2/dnn.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/opencv.hpp"
 
+#include "utils_opencv.h"
 #include "core/tensor/tensor.h"
-#include "common/tensor_util.h"
+#include "error.h"
 
 namespace aisdk
 {
-    bool isMatValid(const cv::Mat& mat) {
-        return !mat.empty() && mat.total() > 0;
-    }
-
-    cv::Mat squeeze(const cv::Mat& input) {
-        std::vector<int> new_shape;
-        for (int i = 0; i < input.dims; ++i) {
-            if (input.size[i] > 1) {
-                new_shape.push_back(input.size[i]);
-            }
-        }
-        return input.reshape(1, new_shape);
-    }
-
-    cv::Mat apply_sigmoid(const cv::Mat& input) {
-        cv::Mat output;
-        cv::exp(-input, output);
-        return 1.0 / (1.0 + output);
-    }
-
-    void BoxesVec2Rect(const std::vector<int32_t>& boxes, cv::Rect& rect){
-        rect.x = boxes[0];
-        rect.y = boxes[1];
-        rect.width = boxes[2];
-        rect.height = boxes[3];
-    }
-
-    std::vector<cv::Rect> rescale_boxes(const std::vector<cv::Rect>& boxes, cv::Size original_size, cv::Size new_size) {
-        std::vector<cv::Rect> scaled_boxes;
-        float scale_x = static_cast<float>(new_size.width) / original_size.width;
-        float scale_y = static_cast<float>(new_size.height) / original_size.height;
-
-        for (const auto& box : boxes) {
-            cv::Rect scaled_box(
-                static_cast<int>(std::round(box.x * scale_x)),
-                static_cast<int>(std::round(box.y * scale_y)),
-                static_cast<int>(std::round(box.width * scale_x)),
-                static_cast<int>(std::round(box.height * scale_y)));
-            scaled_boxes.push_back(scaled_box);
-        }
-        return scaled_boxes;
-    }
-
-    // May implement other NMS algorithms here
-    std::vector<int32_t> NMSBoxes(const std::vector<std::vector<int32_t>>& boxes, const std::vector<float>& scores, const float confidence_threshold, const float iou_threshold)
+    int32_t NMSBoxes(const std::vector<std::vector<int32_t>>& boxes, const std::vector<float>& scores, 
+                    const float confidence_threshold, const float iou_threshold, std::vector<int32_t> &indices)
     {
         std::cout << "NMSBoxes" << std::endl;
-        std::vector<int32_t> indices;
 
+        if(boxes.empty() || scores.empty() || boxes.size()!= scores.size() ||
+            confidence_threshold < 0.0 || confidence_threshold > 1.0 ||
+            iou_threshold < 0.0 || iou_threshold > 1.0){
+            std::cout << "Invalid parameters" << std::endl;
+            return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
+        }
+
+        // Use OpenCV's built-in non-maximum suppression algorithm, may implement other NMS algorithms here
         std::vector<cv::Rect> rects(boxes.size());
         for (int32_t i = 0; i < boxes.size(); ++i) {
             BoxesVec2Rect(boxes[i], rects[i]);
         }
         cv::dnn::NMSBoxes(rects, scores, confidence_threshold, iou_threshold, indices);
 
-        return indices;
+        return ErrorCode::ERROR_CODE_OK;
     }
 
-    std::vector<int32_t> ExtractBox(const cv::Mat& output, int32_t i)
+    int32_t ExtractBox(const cv::Mat& output, int32_t i, std::vector<int32_t>& box)
     {
         std::cout << "ExtractBox" << std::endl;
+        if(output.empty() || i < 0 || i >= output.rows){
+            std::cout << "Invalid parameters" << std::endl;
+            return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
+        }
+
+        box.clear();
+        box.reserve(4);
+
         float x = output.at<float>(i, 0);
         float y = output.at<float>(i, 1);
         float w = output.at<float>(i, 2);
         float h = output.at<float>(i, 3);
 
-        // Calculate the scaled coordinates of the bounding box
-        // TODO: 这里需要根据模型的输入尺寸进行调整
-        // int32_t left = static_cast<int32_t>((x - w / 2) * x_factor);
-        // int32_t top = static_cast<int32_t>((y - h / 2) * y_factor);
-        // int32_t width = static_cast<int32_t>(w * x_factor);
-        // int32_t height = static_cast<int32_t>(h * y_factor);
-        int32_t left = static_cast<int32_t>(x - w / 2);
-        int32_t top = static_cast<int32_t>(y - h / 2);
-        int32_t width = static_cast<int32_t>(w);
-        int32_t height = static_cast<int32_t>(h);
+        // Calculate the scaled coordinates of the bounding box(left, top, width, height)
+        box.push_back(static_cast<int32_t>(x - w / 2));
+        box.push_back(static_cast<int32_t>(y - h / 2));
+        box.push_back(static_cast<int32_t>(w));
+        box.push_back(static_cast<int32_t>(h));
+        // TODO: 这里需要根据模型的输入尺寸进行以下的调整
+        // box.push_back(static_cast<int32_t>((x - w / 2) * x_factor));
+        // box.push_back(static_cast<int32_t>((y - h / 2) * y_factor));
+        // box.push_back(static_cast<int32_t>(w * x_factor));
+        // box.push_back(static_cast<int32_t>(h * y_factor));
 
-        return std::vector<int32_t>{left, top, width, height};
+        return ErrorCode::ERROR_CODE_OK;
     }
 
     int32_t ProcessDetectionPredictions(const cv::Mat& results, float confidence_threshold, Predictions& predictions)
     {
         std::cout << "ProcessDetectionPredictions" << std::endl;
-        if(!isMatValid(results)){
-            std::cout << "Invalid results" << std::endl;
-            return -1;
+        if(!isMatValid(results) || confidence_threshold < 0.0 || confidence_threshold > 1.0){
+            std::cout << "Invalid parameters" << std::endl;
+            return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
         }
 
         // Squeeze and transpose the results tensor
@@ -104,37 +78,40 @@ namespace aisdk
         cv::transpose(output, output);
 
         // Iterate over each row of the output
+        double max_score;
+        int32_t max_index;
+        std::vector<int32_t> box;
         for (int32_t i = 0; i < output.rows; ++i)
         {
             cv::Mat class_scores = output.row(i).colRange(4, output.cols);
-            double max_score;
-            int32_t max_index;
-
+            
             // Find the maximum score and its index
             cv::minMaxIdx(class_scores, nullptr, &max_score, nullptr, &max_index);
 
             // If the maximum score is above the confidence threshold
             if (max_score >= confidence_threshold) {
                 // Add the class ID, score, and box coordinates to the respective lists
+                if(ExtractBox(output, i, box) != ErrorCode::ERROR_CODE_OK){
+                    return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+                }
+                predictions.boxes.push_back(box);
                 predictions.class_ids.push_back(max_index);
-                predictions.scores.push_back(static_cast<float>(max_score));
-                predictions.boxes.push_back(ExtractBox(output, i));
+                predictions.scores.push_back(static_cast<float>(max_score));    
             }
         }
-        return predictions.class_ids.empty() ? -1 : 0;
+        return ErrorCode::ERROR_CODE_OK;
     }
 
-    void ConstructResultTensor(const Predictions& predictions, std::vector<int>& indices, cv::Mat& output)
+    int32_t ConstructResultTensor(const Predictions& predictions, std::vector<int>& indices, cv::Mat& output)
     {
         std::cout << "ConstructResultTensor" << std::endl;
 
         if (predictions.class_ids.empty() || indices.empty()){
-            return;
+            return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
         }
         // accroding to the result.h, the max number of boxes is 32
-        int max_boxes = std::min(static_cast<int>(indices.size()), 32);
+        int32_t max_boxes = std::min(static_cast<int>(indices.size()), 32);
         // each row: class_id, score, bbox->(left, top, width, height）
-
         output.create(std::vector<int32_t>{max_boxes, 6}, CV_32FC1);
 
         for (int32_t i = 0; i < max_boxes; ++i) {
@@ -147,36 +124,51 @@ namespace aisdk
             output.at<float>(i, 3) = static_cast<float>(box[1]);
             output.at<float>(i, 4) = static_cast<float>(box[2]);
             output.at<float>(i, 5) = static_cast<float>(box[3]);
-        }     
+        }
+        return ErrorCode::ERROR_CODE_OK;
     }
 
     int32_t YoloDetectionPostprocOpencv(const cv::Mat& input, cv::Mat& output, float confidence_threshold)
     {
         std::cout << "YoloDetectionPostprocOpencv" << std::endl;
 
-        if(!isMatValid(input) || !isMatValid(output)){
-            std::cout << "Invalid input or output" << std::endl;
-            return -1;
+        if(!isMatValid(input) || confidence_threshold < 0.0 || confidence_threshold > 1.0){
+            std::cout << "Invalid parameters" << std::endl;
+            return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
         }
 
         Predictions predictions;
-        if(ProcessDetectionPredictions(input, confidence_threshold, predictions) < 0){
-            return -1;
+        if(ProcessDetectionPredictions(input, confidence_threshold, predictions) != ErrorCode::ERROR_CODE_OK){
+            return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
         }
 
         if (predictions.class_ids.empty()) {
             output.release();
-            return 0;
+            return ErrorCode::ERROR_CODE_OK;
         }
 
         // TODO: 这里的IOU_THRESHOLD需要根据情况调整
         // Apply non-maximum suppression to filter out overlapping bounding boxes
-        std::vector<int> indices = NMSBoxes(predictions.boxes, predictions.scores, confidence_threshold, IOU_THRESHOLD);
+        std::vector<int32_t> indices;
+        if(NMSBoxes(predictions.boxes, predictions.scores, confidence_threshold, IOU_THRESHOLD, indices) != ErrorCode::ERROR_CODE_OK){
+            output.release();
+            return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+        }
 
-        ConstructResultTensor(predictions, indices, output);
+        if(indices.empty()){
+            output.release();
+            return ErrorCode::ERROR_CODE_OK;
+        }
 
-        return 0;
+        if(ConstructResultTensor(predictions, indices, output) != ErrorCode::ERROR_CODE_OK){
+            output.release();
+            return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+        }
+
+        return ErrorCode::ERROR_CODE_OK;
     }
+
+
 
     int32_t ProcessSegmentationPredictions(const cv::Mat& results, float confidence_threshold, int32_t num_masks, Predictions& predictions, MaskPredictions& mask_predictions)
     {
@@ -199,6 +191,7 @@ namespace aisdk
             cv::Mat class_scores = output.row(i).colRange(4, 4 + num_classes);
             double max_score;
             int32_t max_index;
+            std::vector<int32_t> box;
 
             // Find the maximum score and its index
             cv::minMaxIdx(class_scores, nullptr, &max_score, nullptr, &max_index);
@@ -208,7 +201,10 @@ namespace aisdk
                 // Add the class ID, score, and box coordinates to the respective lists
                 predictions.class_ids.push_back(max_index);
                 predictions.scores.push_back(static_cast<float>(max_score));
-                predictions.boxes.push_back(ExtractBox(output, i));
+                if(ExtractBox(output, i, box) != ErrorCode::ERROR_CODE_OK){
+                    return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+                }
+                predictions.boxes.push_back(box);
                 mask_predictions.mask_predictions.push_back(output.row(i).colRange(4 + num_classes, output.cols));
             }
         }
@@ -277,7 +273,7 @@ namespace aisdk
     {
         std::cout << "YoloSegmentationPostprocOpencv" << std::endl;
 
-        if(!isMatValid(input) || !isMatValid(output)){
+        if(!isMatValid(input)){
             std::cout << "Invalid input or output" << std::endl;
             return -1;
         }
@@ -303,7 +299,8 @@ namespace aisdk
 
         // TODO: 这里的IOU_THRESHOLD需要根据情况调整
         // Apply non-maximum suppression to filter out overlapping bounding boxes
-        std::vector<int> indices = NMSBoxes(predictions.boxes, predictions.scores, confidence_threshold, IOU_THRESHOLD);
+        std::vector<int32_t> indices;
+        NMSBoxes(predictions.boxes, predictions.scores, confidence_threshold, IOU_THRESHOLD, indices);
 
         cv::Mat prediction_output;
         ConstructResultTensor(predictions, indices, prediction_output);

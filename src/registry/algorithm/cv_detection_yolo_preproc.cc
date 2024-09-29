@@ -1,25 +1,36 @@
 #include "cv_detection_yolo_preproc.h"
 #include "utils/preproc_opencv.h"
 #include "common/tensor_util.h"
+#include "error.h"
 
 using namespace aisdk;
 // 初始化
 int YoloPreProcNode::Init(std::string config)
 {
+    // Not implemented yet
     return true;
 }
 
 // 处理数据
 int YoloPreProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
 {
+    if (input == nullptr || output == nullptr) {
+        return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
+    }
+
     cv::Mat input_mat, output_mat;
-    tensor2mat(input, input_mat);
+    if (tensor2mat(input, input_mat) != 0) {
+        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+        
+    }
     
     YoloPreprocOpencv(input_mat, output_mat, 480, 640);
 
-    mat2tensor(output_mat, output);
+    if (mat2tensor(output_mat, output) != 0) {
+        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+    }
 
-    return true;
+    return ErrorCode::ERROR_CODE_OK;
 }
 
 int YoloPreProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 
