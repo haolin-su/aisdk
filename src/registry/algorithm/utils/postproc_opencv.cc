@@ -12,7 +12,7 @@
 
 namespace aisdk
 {
-    int32_t NMSBoxes(const std::vector<std::vector<int32_t>>& boxes, const std::vector<float>& scores, 
+    int32_t NMSBoxes(std::vector<std::vector<int32_t>>& boxes, const std::vector<float>& scores, 
                     const float confidence_threshold, const float iou_threshold, std::vector<int32_t> &indices)
     {
         std::cout << "NMSBoxes" << std::endl;
@@ -29,14 +29,28 @@ namespace aisdk
         for (int32_t i = 0; i < boxes.size(); ++i) {
             BoxesVec2Rect(boxes[i], rects[i]);
         }
+        std::cout << "boxes.size(): " << boxes.size() << std::endl;
         cv::dnn::NMSBoxes(rects, scores, confidence_threshold, iou_threshold, indices);
 
+        // accroding to the result.h, the max number of boxes is 32
+        std::cout << "indices.size(): " << indices.size() << std::endl;
+        int32_t max_boxes = std::min(static_cast<int>(indices.size()), 32);
+        indices.resize(max_boxes);
+        std::cout << "indices.size(): " << indices.size() << std::endl;
+
+        boxes.clear();
+        boxes.reserve(max_boxes);
+        for (int32_t i = 0; i < max_boxes; ++i) {
+            int32_t index = indices[i];
+            boxes.push_back(std::vector<int32_t>{rects[index].x, rects[index].y, rects[index].width, rects[index].height});
+        }
+        std::cout << "boxes.size(): " << boxes.size() << std::endl;
         return ErrorCode::ERROR_CODE_OK;
     }
 
     int32_t ExtractBox(const cv::Mat& output, int32_t i, std::vector<int32_t>& box)
     {
-        std::cout << "ExtractBox" << std::endl;
+        // std::cout << "ExtractBox" << std::endl;
         if(output.empty() || i < 0 || i >= output.rows){
             std::cout << "Invalid parameters" << std::endl;
             return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
@@ -87,7 +101,6 @@ namespace aisdk
             
             // Find the maximum score and its index
             cv::minMaxIdx(class_scores, nullptr, &max_score, nullptr, &max_index);
-
             // If the maximum score is above the confidence threshold
             if (max_score >= confidence_threshold) {
                 // Add the class ID, score, and box coordinates to the respective lists
@@ -109,12 +122,11 @@ namespace aisdk
         if (predictions.class_ids.empty() || indices.empty()){
             return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
         }
-        // accroding to the result.h, the max number of boxes is 32
-        int32_t max_boxes = std::min(static_cast<int>(indices.size()), 32);
-        // each row: class_id, score, bbox->(left, top, width, height）
-        output.create(std::vector<int32_t>{max_boxes, 6}, CV_32FC1);
 
-        for (int32_t i = 0; i < max_boxes; ++i) {
+        // each row: class_id, score, bbox->(left, top, width, height）
+        output.create(std::vector<int32_t>(static_cast<int32_t>(indices.size()), 6), CV_32FC1);
+
+        for (int32_t i = 0; i < indices.size(); ++i) {
             int32_t index = indices[i];
             output.at<float>(i, 0) = static_cast<float>(predictions.class_ids[index]);
             output.at<float>(i, 1) = static_cast<float>(predictions.scores[index]);
@@ -131,7 +143,7 @@ namespace aisdk
     int32_t YoloDetectionPostprocOpencv(const cv::Mat& input, cv::Mat& output, float confidence_threshold)
     {
         std::cout << "YoloDetectionPostprocOpencv" << std::endl;
-
+        std::cout << input.empty() << " " << input.dims << " " << confidence_threshold << std::endl;
         if(!isMatValid(input) || confidence_threshold < 0.0 || confidence_threshold > 1.0){
             std::cout << "Invalid parameters" << std::endl;
             return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
@@ -173,17 +185,18 @@ namespace aisdk
     int32_t ProcessSegmentationPredictions(const cv::Mat& results, float confidence_threshold, int32_t num_masks, Predictions& predictions, MaskPredictions& mask_predictions)
     {
         std::cout << "ProcessSegmentationPredictions" << std::endl;
-        if(!isMatValid(results)){
+        if(!isMatValid(results) || confidence_threshold < 0.0 || confidence_threshold > 1.0 || num_masks < 1){
             std::cout << "Invalid results" << std::endl;
-            return -1;
+            return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
         }
 
         // Squeeze and transpose the results tensor
         // Sequence: bbox_x, bbox_y, bbox_w, bbox_h, class_1, class_2,..., class_n, mask_1, mask_2,..., mask_n
         cv::Mat output = squeeze(results);
-        cv::transpose(output, output); 
+        cv::transpose(output, output);
+        
         // Total size = bbox (bbox_x, bbox_y, bbox_w, bbox_h) + num_classes + num_masks
-        int32_t num_classes = results.size[1] - num_masks - 4;
+        int32_t num_classes = output.cols - num_masks - 4;
 
         // Iterate over each row of the output
         for (int32_t i = 0; i < output.rows; ++i)
@@ -208,44 +221,23 @@ namespace aisdk
                 mask_predictions.mask_predictions.push_back(output.row(i).colRange(4 + num_classes, output.cols));
             }
         }
-        return predictions.class_ids.empty() ? -1 : 0;
+        return ErrorCode::ERROR_CODE_OK;
     }
 
-    // TODO: 这段代码要重新看一下实现
-    int32_t ProcessSegmentationMaskPredictions(const cv::Mat& results, MaskPredictions& mask_predictions, std::vector<std::vector<int32_t>> boxes, cv::Mat& mask_map)
-    {
-        std::cout << "ProcessSegmentationMaskPredictions" << std::endl;
-        if(!isMatValid(results) || !isMatValid(mask_predictions.mask_predictions[0])){
-            std::cout << "Invalid input" << std::endl;
-            return -1;
-        }
+    int32_t crop_mask(cv::Mat& mask_map, std::vector<cv::Rect>& scale_boxes, std::vector<std::vector<int32_t>>& boxes,
+                    cv::Mat& masks, cv::Size img_size, cv::Size mask_size) {
 
-        cv::Mat output = squeeze(mask_predictions.mask_predictions[0]);
+        std::cout << "crop_mask" << std::endl;
 
-        int32_t num_mask = mask_predictions.mask_predictions[0].at<float>(0);
-        int32_t mask_height = mask_predictions.mask_predictions[0].at<float>(1);
-        int32_t mask_width = mask_predictions.mask_predictions[0].at<float>(2);
+        // mask_map = cv::Mat::zeros(scale_boxes.size(), img_size.width, img_size.height, CV_32F);
+        mask_map = cv::Mat::zeros(scale_boxes.size() * img_size.width * img_size.height, 1, CV_32F);
+        mask_map = mask_map.reshape(1, std::vector<int32_t>{static_cast<int32_t>(scale_boxes.size()), img_size.width, img_size.height});
 
-        // 计算掩码
-        cv::Mat masks;
-        cv::Mat reshaped_mask_output = output.reshape(1, num_mask); // CHW 转换为 C(高度*宽度)
-        cv::Mat sigmoid_mask_predictions = apply_sigmoid(mask_predictions.mask_predictions[0] * reshaped_mask_output);
-        masks = sigmoid_mask_predictions.reshape(1, -1); // 重新调整形状
-
-        // 调整边界框
-        std::vector<cv::Rect> rects(boxes.size());
-        for (int i = 0; i < boxes.size(); ++i) {
-            BoxesVec2Rect(boxes[i], rects[i]);
-        }
-
-        // TODO: 这里的img_height和img_width需要从算法的信息获取
-        int32_t img_height = 416;
-        int32_t img_width = 416;
-        std::vector<cv::Rect> scale_boxes = rescale_boxes(rects, cv::Size(img_height, img_width), cv::Size(mask_height, mask_width));
-
-        // 处理每个框/掩码对
-        mask_map = cv::Mat::zeros(scale_boxes.size(), img_height * img_width, CV_32F);
-        cv::Size blur_size(int(img_width / mask_width), int(img_height / mask_height));
+        std::cout << "mask_map" << std::endl;
+        print_mat_shape(mask_map);
+        std::cout << "masks" << std::endl;
+        print_mat_shape(masks);
+        cv::Size blur_size(int(img_size.width / mask_size.width), int(img_size.height / mask_size.height));
 
         for (size_t i = 0; i < scale_boxes.size(); ++i) {
             int scale_x1 = std::floor(scale_boxes[i].x);
@@ -258,57 +250,131 @@ namespace aisdk
             int x2 = std::ceil(boxes[i][0] + boxes[i][2]);
             int y2 = std::ceil(boxes[i][1] + boxes[i][3]);
 
+            std::cout << "scale[x1, y1, x2, y2] = " << scale_x1 << ", " << scale_y1 << ", " << scale_x2 << ", " << scale_y2  << std::endl;
+            std::cout << "[x1, y1, x2, y2] = " << x1 << ", " << y1 << ", " << x2 << ", " << y2  << std::endl;
+            
+            // for every box/mask pair, get the mask map
+            // scale_crop_mask = masks[i][scale_y1:scale_y2, scale_x1:scale_x2]
             cv::Mat scale_crop_mask = masks.row(i)(cv::Range(scale_y1, scale_y2), cv::Range(scale_x1, scale_x2));
+            std::cout << "scale_crop_mask" << std::endl;
+            print_mat_shape(scale_crop_mask);
             cv::Mat crop_mask;
             cv::resize(scale_crop_mask, crop_mask, cv::Size(x2 - x1, y2 - y1), 0, 0, cv::INTER_CUBIC);
+            std::cout << "crop_mask" << std::endl;
+            print_mat_shape(crop_mask);
             cv::blur(crop_mask, crop_mask, blur_size);
 
             cv::threshold(crop_mask, crop_mask, 0.5, 1, cv::THRESH_BINARY);
             mask_map(std::vector<cv::Range>{cv::Range(i, i + 1), cv::Range(y1, y2), cv::Range(x1, x2)}) = crop_mask;
         }
-        return 0;
+        return ErrorCode::ERROR_CODE_OK;
     }
 
-    int32_t YoloSegmentationPostprocOpencv(const cv::Mat& input, cv::Mat& output, float confidence_threshold, int32_t num_masks)
+    int32_t ProcessSegmentationMaskPredictions(const cv::Mat& results, const MaskPredictions& mask_predictions, std::vector<std::vector<int32_t>> boxes, std::vector<int32_t>& indices, cv::Mat& mask_map)
+    {
+        std::cout << "ProcessSegmentationMaskPredictions" << std::endl;
+        if(!isMatValid(results) || mask_predictions.mask_predictions.empty() || boxes.empty()){
+            std::cout << "Invalid arguments" << std::endl;
+            return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
+        }
+
+        std::vector<cv::Mat> mask_prediction_nms;
+        for(auto i : indices){
+            mask_prediction_nms.push_back(mask_predictions.mask_predictions[i]);
+        }
+
+        cv::Mat output = squeeze(results);
+
+        // get the CHW shape of the mask output form model
+        int32_t num_mask = output.size[0];
+        int32_t mask_height = output.size[1];
+        int32_t mask_width = output.size[2];
+
+        // nx32 @ 32x(160x160) -> nx(160x160) -> sigmoid -> nx160x160
+        std::vector<cv::Mat> masks;
+        // CHW -> C(height*width)
+        output = output.reshape(1, std::vector<int>{num_mask, mask_height * mask_width});
+        // prediction_mask @ mask_output
+        std::cout << "mask_predictions.mask_predictions.size() = " << mask_predictions.mask_predictions.size() << std::endl;
+        // for (const auto& mat : mask_prediction_nms) {
+        //     if (masks.empty()) {
+        //         masks = mat * output;
+        //     } else {
+        //         masks += mat * output;
+        //     }
+        // }
+
+        for (const auto& mat : mask_prediction_nms) {
+                masks.push_back(mat * output);
+        }
+
+        // apply sigmoid
+        cv::Mat sigmoid_mask_predictions = apply_sigmoid(masks);
+        // return back to CHW
+        cv::Mat reshape_sigmoid_mask_predictions = sigmoid_mask_predictions.reshape(1, std::vector<int32_t>{static_cast<int32_t>(masks.total() / (mask_height * mask_width)), mask_height, mask_width});
+        std::cout << "reshape_sigmoid_mask_predictions" << std::endl;
+        print_mat_shape(reshape_sigmoid_mask_predictions);
+        // adjust the bbox coordinates to the mask size
+        std::vector<cv::Rect> rects(boxes.size());
+        for (int i = 0; i < boxes.size(); ++i) {
+            BoxesVec2Rect(boxes[i], rects[i]);
+        }
+
+        // TODO: 这里的img_height和img_width需要从算法的信息获取，现在先设定为模型的input尺寸
+        int32_t img_height = 640;
+        int32_t img_width = 640;
+        std::vector<cv::Rect> scale_boxes = rescale_boxes(rects, cv::Size(img_height, img_width), cv::Size(mask_height, mask_width));
+
+        if(crop_mask(mask_map, scale_boxes, boxes, reshape_sigmoid_mask_predictions, 
+                        cv::Size(img_height, img_width), cv::Size(mask_height, mask_width)) != ErrorCode::ERROR_CODE_OK){
+            return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+        }
+        std::cout << "pass 3" << std::endl;
+        
+        return ErrorCode::ERROR_CODE_OK;
+    }
+
+    int32_t YoloSegmentationPostprocOpencv(const cv::Mat& prediction_input, const cv::Mat& mask_input, cv::Mat& prediction_output, cv::Mat& mask_output, float confidence_threshold, int32_t num_masks)
     {
         std::cout << "YoloSegmentationPostprocOpencv" << std::endl;
 
-        if(!isMatValid(input)){
-            std::cout << "Invalid input or output" << std::endl;
-            return -1;
+        if(!isMatValid(prediction_input) || !isMatValid(mask_input) || 
+            confidence_threshold < 0.0 || confidence_threshold > 1.0 || num_masks < 1){
+            std::cout << "Invalid parameters" << std::endl;
+            return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
         }
-
-        cv::Mat prediction_input = input(std::vector<cv::Range>{cv::Range(0, 1), cv::Range::all(), cv::Range::all(), cv::Range::all()});
-        cv::Mat mask_input = input(std::vector<cv::Range>{cv::Range(1, 2), cv::Range::all(), cv::Range::all(), cv::Range::all()});
 
         Predictions predictions;
         MaskPredictions mask_predictions;
-        if(ProcessSegmentationPredictions(prediction_input, confidence_threshold, NUM_MASKS, predictions, mask_predictions) < 0){
-            return -1;
+        if(ProcessSegmentationPredictions(prediction_input, confidence_threshold, num_masks, predictions, mask_predictions) != ErrorCode::ERROR_CODE_OK){
+            prediction_output.release();
+            return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
         }
 
         if (predictions.class_ids.empty() || mask_predictions.mask_predictions.empty()) {
-            output.release();
-            return 0;
-        }
-
-        cv::Mat mask_map;
-        if(ProcessSegmentationMaskPredictions(mask_input, mask_predictions, predictions.boxes, mask_map) < 0){
-            return -1;
+            prediction_output.release();
+            return ErrorCode::ERROR_CODE_OK;
         }
 
         // TODO: 这里的IOU_THRESHOLD需要根据情况调整
         // Apply non-maximum suppression to filter out overlapping bounding boxes
         std::vector<int32_t> indices;
-        NMSBoxes(predictions.boxes, predictions.scores, confidence_threshold, IOU_THRESHOLD, indices);
+        if(NMSBoxes(predictions.boxes, predictions.scores, confidence_threshold, IOU_THRESHOLD, indices) != ErrorCode::ERROR_CODE_OK){
+            prediction_output.release();
+            return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+        }
 
-        cv::Mat prediction_output;
-        ConstructResultTensor(predictions, indices, prediction_output);
+        if(ProcessSegmentationMaskPredictions(mask_input, mask_predictions, predictions.boxes, indices, mask_output) != ErrorCode::ERROR_CODE_OK){
+            prediction_output.release();
+            return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+        }
 
-        output(std::vector<cv::Range>{cv::Range(0, 1), cv::Range::all(), cv::Range::all(), cv::Range::all()}) = prediction_output;
-        output(std::vector<cv::Range>{cv::Range(1, 2), cv::Range::all(), cv::Range::all(), cv::Range::all()}) = mask_map;
+        if(ConstructResultTensor(predictions, indices, prediction_output) != ErrorCode::ERROR_CODE_OK){
+            prediction_output.release();
+            mask_output.release();
+            return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+        }
 
-        return 0;
+        return ErrorCode::ERROR_CODE_OK;
     }
-
 }

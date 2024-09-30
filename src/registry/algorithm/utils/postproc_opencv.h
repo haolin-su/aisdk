@@ -23,7 +23,7 @@ struct MaskPredictions {
 };
 
 int32_t YoloDetectionPostprocOpencv(const cv::Mat& input, cv::Mat& output, float confidence_threshold);
-int32_t YoloSegmentationPostprocOpencv(const cv::Mat& input, cv::Mat& output, float confidence_threshold, int32_t num_masks);
+int32_t YoloSegmentationPostprocOpencv(const cv::Mat& prediction_input, const cv::Mat& mask_input, cv::Mat& prediction_output, cv::Mat& mask_output, float confidence_threshold, int32_t num_masks);
 
 } // namespace aisdk
 

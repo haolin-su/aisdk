@@ -19,7 +19,7 @@ install(TARGETS test_hello RUNTIME DESTINATION test)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 set(APP_YOLO_SOURCES
-    "registry/test_yolo_det.cc"
+    "registry/test_yolo.cc"
     "registry/yolo_snpe/Util.cpp"
     "registry/yolo_snpe/SetBuilderOptions.cpp"
     "registry/yolo_snpe/SetBuilderOptions.hpp"
@@ -47,9 +47,9 @@ set(APP_YOLO_SOURCES
 )
 include_directories(/opt/qcom/aistack/qairt/2.26.2.240911/include/SNPE)
 
-add_executable(test_yolo_det ${APP_YOLO_SOURCES})
-target_link_libraries(test_yolo_det ${DEVICE_LIBS} aisdk_api aisdk_core aisdk_registry aisdk_common opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn /opt/qcom/aistack/qairt/2.26.2.240911/lib/aarch64-android/libSNPE.so)
-install(TARGETS test_yolo_det RUNTIME DESTINATION test)
+add_executable(test_yolo ${APP_YOLO_SOURCES})
+target_link_libraries(test_yolo ${DEVICE_LIBS} aisdk_api aisdk_core aisdk_registry aisdk_common opencv_core opencv_imgproc opencv_imgcodecs opencv_dnn /opt/qcom/aistack/qairt/2.26.2.240911/lib/aarch64-android/libSNPE.so)
+install(TARGETS test_yolo RUNTIME DESTINATION test)
 
 add_executable(test_qnn_runtime_multimodel registry/qnn/test_qnn_runtime_multimodel.cc registry/qnn/qnn_util.cc ${SRC_UTIL})
 target_link_libraries(test_qnn_runtime_multimodel ${DEVICE_LIBS})

@@ -12,6 +12,7 @@ namespace aisdk {
     cv::Mat apply_sigmoid(const cv::Mat& input);
     void BoxesVec2Rect(const std::vector<int32_t>& boxes, cv::Rect& rect);
     std::vector<cv::Rect> rescale_boxes(const std::vector<cv::Rect>& boxes, cv::Size original_size, cv::Size new_size);
+    void print_mat_shape(const cv::Mat &mat);
 
 } // namespace aisdk
 

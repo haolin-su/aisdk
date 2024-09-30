@@ -18,37 +18,111 @@ int YoloSegPostProcNode::Init(std::string config)
 
 // 处理数据
 int YoloSegPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
-{
-    std::cout << "YoloSegPostProcNode Process" << std::endl;
+{ 
+    // segmentation have two output nodes, use the multiple output node process function
 
-    if (input == nullptr || output == nullptr) {
-        return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
-    }
+//     std::cout << "YoloSegmentationPostProcNode Process" << std::endl;
 
-    cv::Mat input_mat, output_mat;
-    if (tensor2mat(input, input_mat) != 0) {
-        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+//     if (input == nullptr || output == nullptr) {
+//         return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
+//     }
+
+//     cv::Mat input_mat, output_mat;
+//     if (tensor2mat(input, input_mat) != 0) {
+//         return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
         
-    }
+//     }
     
-    YoloSegmentationPostprocOpencv(input_mat, output_mat, CONFIDENCE_THRESHOLD, NUM_MASKS);
+//     if(YoloSegmentationPostprocOpencv(input_mat, output_mat, CONFIDENCE_THRESHOLD, NUM_MASKS) != ErrorCode::ERROR_CODE_OK) {
+//         return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+//     }
 
-    if (mat2tensor(output_mat, output) != 0) {
-        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
-    }
+//     // TODO：以下需要根据segmentation的结果进行修改
+//     // In case the output_mat is empty, return an empty tensor
+//     if (output_mat.empty()) {
+//         output->meta_data_ptr_->result_.result_cv_.detect.count = 0;
+//         output->meta_data_ptr_->result_.result_cv_.detect.objects.clear(); 
+//         return ErrorCode::ERROR_CODE_OK;
+//     }
 
-    // TODO: 增加直接转换成Result的代码
+//     // 待定：返回tensor或者直接转换成Result的格式
+// # if 0
+//     if (mat2tensor(output_mat, output) != 0) {
+//         return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+//     }
+// #else 
+//     output->meta_data_ptr_->result_.result_cv_.detect.count = output_mat.rows;
+//     for (int i = 0; i < output_mat.rows; i++) {
+//         result::ResultCvDetectObject obj;
+//         obj.class_id = output_mat.at<int>(i, 0);
+//         obj.score = output_mat.at<float>(i, 1);
+//         obj.bbox.x = output_mat.at<float>(i, 2);
+//         obj.bbox.y = output_mat.at<float>(i, 3);
+//         obj.bbox.w = output_mat.at<float>(i, 4);
+//         obj.bbox.h = output_mat.at<float>(i, 5);
+//         output->meta_data_ptr_->result_.result_cv_.detect.objects.push_back(obj);
+//     }
+// #endif
+//     std::cout << "YoloSegPostProcNode Process Done" << std::endl;
 
-    return ErrorCode::ERROR_CODE_OK;
+//     return ErrorCode::ERROR_CODE_OK;
+    return 0;
 }
 
 int YoloSegPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) 
 {
-    // cv::Mat input_mat = cv::Mat(inputs[0]->GetData<float>(), inputs[0]->GetShape());
-    // cv::Mat output_mat;
+    std::cout << "YoloSegmentationPostProcNode Process" << std::endl;
+
+    if (inputs.size() != 2 || outputs.size() != 2 || 
+        inputs[0] == nullptr || inputs[1] == nullptr || 
+        outputs[0] == nullptr || outputs[1] == nullptr) {
+        return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
+    }
+
+    // TODO：后续看如何获取数据
+    cv::Mat prediction_input, mask_input;
+    cv::Mat prediction_output, mask_output;
+
     // YoloPreprocOpencv(input_mat, output_mat, 640, 640);
     // outputs[0]->SetData<float>(output_mat.data, output_mat.total() * output_mat.channels());
     // outputs[0]->SetShape({1, 3, 640, 640});
+
+    // use the user defined arguments instead of the default values for CONFIDENCE_THRESHOLD and NUM_MASKS
+    if(YoloSegmentationPostprocOpencv(prediction_input, mask_input, prediction_output, mask_output, CONFIDENCE_THRESHOLD, NUM_MASKS) != ErrorCode::ERROR_CODE_OK) {
+        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+    }
+
+    // TODO：以下需要根据segmentation的结果进行修改
+    // In case the output_mat is empty, return an empty tensor
+    if (prediction_output.empty() || mask_output.empty()) {
+        outputs[0]->meta_data_ptr_->result_.result_cv_.detect.count = 0;
+        outputs[0]->meta_data_ptr_->result_.result_cv_.detect.objects.clear(); 
+        //output[1]
+        return ErrorCode::ERROR_CODE_OK;
+    }
+
+    // 待定：返回tensor或者直接转换成Result的格式
+# if 0
+    if (mat2tensor(prediction_output, output[0]) != 0) {
+        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
+    }
+#else 
+    outputs[0]->meta_data_ptr_->result_.result_cv_.detect.count = prediction_output.rows;
+    for (int i = 0; i < prediction_output.rows; i++) {
+        result::ResultCvDetectObject obj;
+        obj.class_id = prediction_output.at<int>(i, 0);
+        obj.score = prediction_output.at<float>(i, 1);
+        obj.bbox.x = prediction_output.at<float>(i, 2);
+        obj.bbox.y = prediction_output.at<float>(i, 3);
+        obj.bbox.w = prediction_output.at<float>(i, 4);
+        obj.bbox.h = prediction_output.at<float>(i, 5);
+        outputs[0]->meta_data_ptr_->result_.result_cv_.detect.objects.push_back(obj);
+    }
+#endif
+    std::cout << "YoloSegPostProcNode Process Done" << std::endl;
+
+    return ErrorCode::ERROR_CODE_OK;
+
 
     return true;
 }

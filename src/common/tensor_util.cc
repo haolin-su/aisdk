@@ -16,7 +16,6 @@ int tensor2mat(const TensorPtr& tensor, cv::Mat& mat, bool is_copy) {
     //     mat = cv::Mat(tensor->height(), tensor->width(), tensor->type(), tensor->data());
     // }
 
-
     return 0;
 }
 
