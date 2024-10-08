@@ -8,12 +8,8 @@
 
 namespace aisdk
 {
-    bool isMatValid(const cv::Mat &mat)
-    {
-        return !mat.empty();
-    }
 
-    cv::Mat squeeze(const cv::Mat &input)
+    cv::Mat Squeeze(const cv::Mat &input)
     {
         std::vector<int> new_shape;
         for (int i = 0; i < input.dims; ++i)
@@ -26,7 +22,7 @@ namespace aisdk
         return input.reshape(1, new_shape);
     }
 
-    cv::Mat apply_sigmoid(const cv::Mat &input)
+    cv::Mat ApplySigmoid(const cv::Mat &input)
     {
         cv::Mat output;
         cv::exp(-input, output);
@@ -41,25 +37,26 @@ namespace aisdk
         rect.height = boxes[3];
     }
 
-    std::vector<cv::Rect> rescale_boxes(const std::vector<cv::Rect> &boxes, cv::Size original_size, cv::Size new_size)
+    std::vector<std::vector<int32_t>> RescaleBoxes(const std::vector<std::vector<int32_t>> &boxes, int32_t input_height, int32_t input_width, int32_t output_height, int32_t output_width)
     {
-        std::vector<cv::Rect> scaled_boxes;
-        float scale_x = static_cast<float>(new_size.width) / original_size.width;
-        float scale_y = static_cast<float>(new_size.height) / original_size.height;
+        std::vector<std::vector<int32_t>> scaled_boxes;
+
+        float scale_x = static_cast<float>(output_width) / input_width;
+        float scale_y = static_cast<float>(output_height) / input_height;
 
         for (const auto &box : boxes)
-        {
-            cv::Rect scaled_box(
-                static_cast<int>(std::round(box.x * scale_x)),
-                static_cast<int>(std::round(box.y * scale_y)),
-                static_cast<int>(std::round(box.width * scale_x)),
-                static_cast<int>(std::round(box.height * scale_y)));
+        { // x, y, w, h
+            std::vector<int32_t> scaled_box{
+                static_cast<int32_t>(std::round(box[0] * scale_x)),
+                static_cast<int32_t>(std::round(box[1] * scale_y)),
+                static_cast<int32_t>(std::round(box[2] * scale_x)),
+                static_cast<int32_t>(std::round(box[3] * scale_y))};
             scaled_boxes.push_back(scaled_box);
         }
         return scaled_boxes;
     }
 
-    void print_mat_shape(const cv::Mat &mat)
+    void PrintMatShape(const cv::Mat &mat)
     {
 
         std::cout << "Shape: [";

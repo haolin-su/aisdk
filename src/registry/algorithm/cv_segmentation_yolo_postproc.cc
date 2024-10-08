@@ -82,6 +82,19 @@ int YoloSegPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, s
     // TODO：后续看如何获取数据
     cv::Mat prediction_input, mask_input;
     cv::Mat prediction_output, mask_output;
+    tensor2mat(inputs[0], prediction_input);
+    tensor2mat(inputs[1], mask_input);
+    tensor2mat(outputs[0], prediction_output);
+    tensor2mat(outputs[1], mask_output);
+
+    std::vector<int> tensor_shape_0{1, 116, 8400};
+    std::vector<int> tensor_shape_1{1, 32, 160, 160};
+    float* data = nullptr;
+    inputs[0]->GetData(data);
+    prediction_input = cv::Mat(3, tensor_shape_0.data(), CV_32F, data).clone();
+
+    inputs[1]->GetData(data);
+    mask_input = cv::Mat(4, tensor_shape_1.data(), CV_32F, data).clone();
 
     // YoloPreprocOpencv(input_mat, output_mat, 640, 640);
     // outputs[0]->SetData<float>(output_mat.data, output_mat.total() * output_mat.channels());
@@ -97,16 +110,12 @@ int YoloSegPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, s
     if (prediction_output.empty() || mask_output.empty()) {
         outputs[0]->meta_data_ptr_->result_.result_cv_.detect.count = 0;
         outputs[0]->meta_data_ptr_->result_.result_cv_.detect.objects.clear(); 
-        //output[1]
+        outputs[1]->meta_data_ptr_->result_.result_cv_.segment.count = 0;
+        outputs[1]->meta_data_ptr_->result_.result_cv_.segment.objects.clear(); 
         return ErrorCode::ERROR_CODE_OK;
     }
 
     // 待定：返回tensor或者直接转换成Result的格式
-# if 0
-    if (mat2tensor(prediction_output, output[0]) != 0) {
-        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
-    }
-#else 
     outputs[0]->meta_data_ptr_->result_.result_cv_.detect.count = prediction_output.rows;
     for (int i = 0; i < prediction_output.rows; i++) {
         result::ResultCvDetectObject obj;
@@ -118,13 +127,33 @@ int YoloSegPostProcNode::Process(std::vector<std::shared_ptr<Tensor>>& inputs, s
         obj.bbox.h = prediction_output.at<float>(i, 5);
         outputs[0]->meta_data_ptr_->result_.result_cv_.detect.objects.push_back(obj);
     }
-#endif
+
+    outputs[1]->meta_data_ptr_->result_.result_cv_.segment.count = mask_output.rows;
+    for (int i = 0; i < mask_output.rows; i++) {
+        outputs[1]->meta_data_ptr_->result_.result_cv_.segment.objects[i].planner_num = i;
+
+        result::SegPlanner obj;
+        obj.height = mask_output.at<int>(i, 1);
+        obj.width = mask_output.at<int>(i, 2);
+        obj.size = mask_output.at<int>(i, 0) * obj.height * obj.width;
+
+	    for (int i = 0;i < obj.height;i++)
+	    {
+	    	for (int j = 0;j < obj.width;j++)
+	    	{
+	    		for (int k = 0;k < 3;k++)
+	    		{
+	    			obj.data[i * obj.width * 3 + j * 3 + k] = mask_output.row(i).at<cv::Vec3b>(i, j)[k];
+	    		}
+	    	}
+	    }
+
+            outputs[1]->meta_data_ptr_->result_.result_cv_.segment.objects[i].planners.push_back(obj);
+        }
+
     std::cout << "YoloSegPostProcNode Process Done" << std::endl;
 
     return ErrorCode::ERROR_CODE_OK;
-
-
-    return true;
 }
 
 // 释放资源

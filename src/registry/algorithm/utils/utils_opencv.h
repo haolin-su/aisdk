@@ -7,13 +7,12 @@
 #include "opencv2/core.hpp"
 
 namespace aisdk {
-    bool isMatValid(const cv::Mat& mat);
-    cv::Mat squeeze(const cv::Mat& input);
-    cv::Mat apply_sigmoid(const cv::Mat& input);
+    cv::Mat Squeeze(const cv::Mat& input);
+    cv::Mat ApplySigmoid(const cv::Mat& input);
     void BoxesVec2Rect(const std::vector<int32_t>& boxes, cv::Rect& rect);
-    std::vector<cv::Rect> rescale_boxes(const std::vector<cv::Rect>& boxes, cv::Size original_size, cv::Size new_size);
-    void print_mat_shape(const cv::Mat &mat);
-
+    std::vector<std::vector<int32_t>> RescaleBoxes(const std::vector<std::vector<int32_t>> &boxes, int32_t image_height, int32_t image_width, int32_t input_height, int32_t input_width);
+    // for debug
+    void PrintMatShape(const cv::Mat &mat);
 } // namespace aisdk
 
 #endif // FIBO_AI_UTILS_OPENCVH_

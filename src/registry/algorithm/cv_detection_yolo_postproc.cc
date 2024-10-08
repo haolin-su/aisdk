@@ -12,7 +12,6 @@ using namespace aisdk;
 // 初始化
 int YoloPostProcNode::Init(std::string config)
 {
-    std::cout << "YoloPostProcNode Init" << std::endl;
     // Not implemented yet
     return true;
 }
@@ -20,8 +19,6 @@ int YoloPostProcNode::Init(std::string config)
 // 处理数据
 int YoloPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) 
 {
-    std::cout << "YoloDectionPostProcNode Process" << std::endl;
-
     if (input == nullptr || output == nullptr) {
         return ErrorCode::ERROR_CODE_CV_INVALID_PARAM;
     }
@@ -43,12 +40,6 @@ int YoloPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Te
         return ErrorCode::ERROR_CODE_OK;
     }
 
-    // 待定：返回tensor或者直接转换成Result的格式
-# if 0
-    if (mat2tensor(output_mat, output) != 0) {
-        return ErrorCode::ERROR_CODE_CV_PROCESS_FAILED;
-    }
-#else 
     output->meta_data_ptr_->result_.result_cv_.detect.count = output_mat.rows;
     for (int i = 0; i < output_mat.rows; i++) {
         result::ResultCvDetectObject obj;
@@ -60,9 +51,6 @@ int YoloPostProcNode::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Te
         obj.bbox.h = output_mat.at<float>(i, 5);
         output->meta_data_ptr_->result_.result_cv_.detect.objects.push_back(obj);
     }
-#endif
-    std::cout << "YoloSegPostProcNode Process Done" << std::endl;
-
     return ErrorCode::ERROR_CODE_OK;
 }
 
