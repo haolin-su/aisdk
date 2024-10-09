@@ -6,16 +6,16 @@
 namespace aisdk
 {
     
-class SnpeMemory : public IMemory
+class SnpeMemory : public Memory
 {
 public:
-    SnpeMemory();
-    ~SnpeMemory();
+    SnpeMemory(){}
+    ~SnpeMemory(){}
 
     int Alloc(size_t size) override;
-    int Free(void* ptr) override;
+    int Free() override;
     int DevAlloc(size_t size) override;
-    int DevFree(void* ptr) override;
+    int DevFree() override;
     int Memcpy(void* dst, const void* src, size_t size) override;
     int Memset(void* ptr, int value, size_t size) override;
     int MemcpyAsync(void* dst, const void* src, size_t size, MemcpyDirection direction) override;
@@ -26,7 +26,10 @@ public:
     int Munmap(void* ptr) override;
 
     int GetMemSize() override;
-    int GetMemPtr() override;
+    void* GetMemPtr() override;
+
+    MemoryType GetMemoryType() override;
+
     
 };
 

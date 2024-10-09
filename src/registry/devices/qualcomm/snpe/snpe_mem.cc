@@ -8,6 +8,8 @@ using namespace aisdk;
 #include <unordered_map>
 #include <string>
 
+#include "common/log.h"
+
 #include "SNPE/SNPE.hpp"
 #include "SNPE/SNPEFactory.hpp"
 #include "SNPE/SNPE.h"
@@ -50,7 +52,7 @@ using namespace aisdk;
 
 int SnpeMemory::Alloc(size_t size)
 {
-
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeMemory::Alloc begin");
     // // create user-backed storage to load input data onto it
     // applicationBuffers.emplace(name, std::vector<uint8_t>(bufSize));
 
@@ -73,9 +75,11 @@ int SnpeMemory::Alloc(size_t size)
     std::unordered_map <std::string, std::vector<uint8_t>> applicationInputBuffers;
     createInputBufferMap(inputMap, applicationInputBuffers, snpeUserBackedInputBuffers, snpe, true, staticQuantization, bitWidth);
 
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeMemory::Alloc end");
+
     return 0;
 }
-int SnpeMemory::Free(void* ptr) 
+int SnpeMemory::Free() 
 {
     return 0;
 }
@@ -83,7 +87,7 @@ int SnpeMemory::DevAlloc(size_t size)
 {
     return 0;
 }
-int SnpeMemory::DevFree(void* ptr)
+int SnpeMemory::DevFree()
 {
     return 0;
 }
@@ -119,7 +123,12 @@ int SnpeMemory::GetMemSize()
 {
     return 0;
 }
-int SnpeMemory::GetMemPtr()
+void* SnpeMemory::GetMemPtr()
 {
-    return 0;
+    return nullptr;
+}
+
+MemoryType SnpeMemory::GetMemoryType()
+{
+    return MemoryType::AISDK_MEM_DEVICE_QUALCOMM;
 }

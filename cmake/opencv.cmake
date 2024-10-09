@@ -24,10 +24,10 @@ set(OPENCV_BUILD_PATH ${CMAKE_BINARY_DIR}/opencv)
 file(MAKE_DIRECTORY ${OPENCV_BUILD_PATH})
 
 # 创建opencv安装目录
-set(OPENCV_INSTALL_PATH ${CMAKE_SOURCE_DIR}/third_party/opencv-${OPENCV_VERSION}-install-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR_ARCH})
+set(OPENCV_INSTALL_PATH ${CMAKE_SOURCE_DIR}/third_party/opencv-${OPENCV_VERSION}-install-${BUILD_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR_ARCH})
 file(MAKE_DIRECTORY ${OPENCV_INSTALL_PATH})
 
-if (NOT EXISTS ${OPENCV_INSTALL_PATH}/lib/libopencv_core.so)
+if (NOT EXISTS ${OPENCV_INSTALL_PATH}/lib/libopencv_core.so AND NOT EXISTS ${OPENCV_INSTALL_PATH}/lib/libopencv_core.a)
     # 如果是交叉编译,并且是android编译:
     if (CMAKE_SYSTEM_PROCESSOR_ARCH STREQUAL "aarch64")
         if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -38,20 +38,23 @@ if (NOT EXISTS ${OPENCV_INSTALL_PATH}/lib/libopencv_core.so)
             message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
         endif()
 
-        if (CMAKE_SYSTEM_NAME STREQUAL "android")
+        if (BUILD_SYSTEM_NAME STREQUAL "android")
             message(STATUS "ANDROID_NDK: ${ANDROID_NDK}")
             message(STATUS "ANDROID_ABI: ${ANDROID_ABI}")
             message(STATUS "ANDROID_NATIVE_API_LEVEL: ${ANDROID_NATIVE_API_LEVEL}")
             set(CMAKE_TOOLCHAIN_PATH ${ANDROID_NDK}/build/cmake/android.toolchain.cmake)
             execute_process(COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=${OPENCV_INSTALL_PATH} 
-                                                    # -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                                                    # -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                                                    -DCMAKE_TOOLCHAIN_FILE=$CMAKE_TOOLCHAIN_PATH 
+                                                    # -DCMAKE_CXX_COMPILER=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${ANDROID_NATIVE_API_LEVEL}-clang++
+                                                    # -DCMAKE_C_COMPILER=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${ANDROID_NATIVE_API_LEVEL}-clang
+                                                    -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake
+                                                    -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a 
                                                     -DCMAKE_BUILD_TYPE=Release 
-                                                    -DANDROID_NDK=$NDK_PATH  
+                                                    -DANDROID_NDK=${ANDROID_NDK}  
                                                     -DCMAKE_CXX_FLAGS=-std=c++11 
-                                                    -DANDROID_ABI=arm64-v8a 
-                                                    -DANDROID_STL=c++_static 
+                                                    -DANDROID_ABI=arm64-v8a
+                                                    -DBUILD_SHARED_LIBS=ON
+                                                    -DANDROID_STL=c++_shared
+                                                    # -DANDROID_STL=c++_static 
                                                     -DENABLE_CXX11=ON 
                                                     -DBUILD_ANDROID_PROJECTS=OFF 
                                                     -DBUILD_ANDROID_EXAMPLES=OFF 
@@ -65,7 +68,6 @@ if (NOT EXISTS ${OPENCV_INSTALL_PATH}/lib/libopencv_core.so)
                                                     -DBUILD_PACKAGE=OFF 
                                                     -DBUILD_PERF_TESTS=OFF 
                                                     -DBUILD_PNG=OFF 
-                                                    -DBUILD_SHARED_LIBS=OFF 
                                                     -DBUILD_TBB=OFF  
                                                     -DBUILD_TESTS=OFF 
                                                     -DBUILD_TIFF=OFF  
@@ -78,11 +80,11 @@ if (NOT EXISTS ${OPENCV_INSTALL_PATH}/lib/libopencv_core.so)
                                                     -DBUILD_opencv_features2d=OFF 
                                                     -DBUILD_opencv_flann=OFF 
                                                     -DBUILD_opencv_highgui=OFF 
-                                                    -DBUILD_opencv_imgcodecs=OFF 
+                                                    -DBUILD_opencv_imgcodecs=ON
                                                     -DBUILD_opencv_imgproc=ON 
                                                     -DBUILD_opencv_ml=OFF 
                                                     -DBUILD_opencv_objdetect=OFF 
-                                                    -DBUILD_opencv_photo=OFF 
+                                                    -DBUILD_opencv_photo=ON 
                                                     -DBUILD_opencv_python2=OFF 
                                                     -DBUILD_opencv_python3=OFF 
                                                     -DBUILD_opencv_shape=OFF 
@@ -108,6 +110,7 @@ if (NOT EXISTS ${OPENCV_INSTALL_PATH}/lib/libopencv_core.so)
                                                     -DWITH_TIFF=OFF 
                                                     -DWITH_WEBP=OFF 
                                                     -DANDROID_NATIVE_API_LEVEL=${ANDROID_NATIVE_API_LEVEL}
+                                                    # -DCMAKE_SYSROOT=/opt/ndk/android-ndk-r26c/toolchains/llvm/prebuilt/linux-x86_64/sysroot
                                                     ${OPENCV_SRC_PATH} 
                                                     -B ${OPENCV_BUILD_PATH})
         else()
@@ -269,12 +272,13 @@ endif()
 include_directories(${OPENCV_INSTALL_PATH}/include/opencv4)
 link_directories(${OPENCV_INSTALL_PATH}/lib)
 set(OPENCV_INCLUDE_DIRS ${OPENCV_INSTALL_PATH}/include/opencv4)
-set(OPENCV_LIBRARIES ${OPENCV_INSTALL_PATH}/lib/libopencv_core.so ${OPENCV_INSTALL_PATH}/lib/libopencv_imgcodecs.so ${OPENCV_INSTALL_PATH}/lib/libopencv_imgproc.so ${OPENCV_INSTALL_PATH}/lib/libopencv_highgui.so ${OPENCV_INSTALL_PATH}/lib/libopencv_videoio.so ${OPENCV_INSTALL_PATH}/lib/libopencv_calib3d.so ${OPENCV_INSTALL_PATH}/lib/libopencv_features2d.so ${OPENCV_INSTALL_PATH}/lib/libopencv_flann.so ${OPENCV_INSTALL_PATH}/lib/libopencv_ml.so ${OPENCV_INSTALL_PATH}/lib/libopencv_objdetect.so ${OPENCV_INSTALL_PATH}/lib/libopencv_photo.so ${OPENCV_INSTALL_PATH}/lib/libopencv_stitching.so ${OPENCV_INSTALL_PATH}/lib/libopencv_video.so ${OPENCV_INSTALL_PATH}/lib/libopencv_world.so)
+set(OpenCV_LIBS ${OPENCV_INSTALL_PATH}/lib/libopencv_core.so ${OPENCV_INSTALL_PATH}/lib/libopencv_imgcodecs.so ${OPENCV_INSTALL_PATH}/lib/libopencv_imgproc.so ${OPENCV_INSTALL_PATH}/lib/libopencv_video.so )
+# set(OpenCV_LIBS ${OPENCV_INSTALL_PATH}/lib/libopencv_core.a ${OPENCV_INSTALL_PATH}/lib/libopencv_imgcodecs.a ${OPENCV_INSTALL_PATH}/lib/libopencv_imgproc.a  ${OPENCV_INSTALL_PATH}/lib/libopencv_video.a)
 
 # 打印opencv信息
 message(STATUS "opencv version: ${OPENCV_VERSION}")
 message(STATUS "opencv include dirs: ${OPENCV_INCLUDE_DIRS}")
 message(STATUS "opencv libraries: ${OPENCV_LIBRARIES}")
 
-install(DIRECTORY ${OPENCV_INSTALL_PATH}/include/opencv4 DESTINATION third_party/opencv/include/opencv4)
-
+install(DIRECTORY ${OPENCV_INSTALL_PATH}/include/opencv4 DESTINATION third_party/opencv/include)
+install(DIRECTORY ${OPENCV_INSTALL_PATH}/lib DESTINATION third_party/opencv/)

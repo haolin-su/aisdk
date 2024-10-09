@@ -7,6 +7,7 @@
 #include <string>
 
 #include "core/tensor/tensor.h"
+#include "common/log.h"
 
 #include "SNPE/SNPE.hpp"
 #include "SNPE/SNPEFactory.hpp"
@@ -22,100 +23,6 @@
 
 using namespace aisdk;
 
-// // {
-// // {
-// //     #ifdef __ANDROID__
-// //     // Initialize Logs with level LOG_ERROR.
-// //     zdl::SNPE::SNPEFactory::initializeLogging(zdl::DlSystem::LogLevel_t::LOG_ERROR);
-// // #else
-// //     // Initialize Logs with specified log level as LOG_ERROR and log path as "./Log".
-// //     zdl::SNPE::SNPEFactory::initializeLogging(zdl::DlSystem::LogLevel_t::LOG_ERROR, "./Log");
-// // #endif
-
-// //     // Update Log Level to LOG_WARN.
-// //     zdl::SNPE::SNPEFactory::setLogLevel(zdl::DlSystem::LogLevel_t::LOG_WARN);
-
-// std::unique_ptr<zdl::DlContainer::IDlContainer> container = loadContainerFromFile(dlc);
-//     if (container == nullptr)
-//     {
-//        std::cerr << "Error while opening the container file." << std::endl;
-//        return EXIT_FAILURE;
-//     }
-
-// std::unique_ptr<zdl::SNPE::SNPE> snpe;
-//     zdl::DlSystem::PlatformConfig platformConfig;
-
-//      snpe = setBuilderOptions(container, runtime, runtimeList,
-//                              useUserSuppliedBuffers, platformConfig,
-//                              usingInitCaching, cpuFixedPointMode);
-//     if (snpe == nullptr)
-//     {
-//        std::cerr << "Error while building SNPE object." << std::endl;
-//        return EXIT_FAILURE;
-//     }
-
-//     zdl::DlSystem::TensorShape tensorShape;
-//     tensorShape = snpe->getInputDimensions();
-//     size_t batchSize = tensorShape.getDimensions()[0];
-
-//     // Open the input file listing and group input files into batches
-//     std::vector<std::vector<std::string>> inputs = preprocessInput(inputFile, batchSize);
-//     zdl::DlSystem::UserBufferMap inputMap, outputMap;
-//        std::vector <std::unique_ptr<zdl::DlSystem::IUserBuffer>> snpeUserBackedInputBuffers, snpeUserBackedOutputBuffers;
-//        std::unordered_map <std::string, std::vector<uint8_t>> applicationOutputBuffers;
-
-//        if(bufferType == ITENSOR)
-//     {
-//         // A tensor map for SNPE execution outputs
-//         zdl::DlSystem::TensorMap outputTensorMap;
-//         //Get input names and number
-//         const auto& inputTensorNamesRef = snpe->getInputTensorNames();
-//         if (!inputTensorNamesRef) throw std::runtime_error("Error obtaining Input tensor names");
-//         const auto &inputTensorNames = *inputTensorNamesRef;
-
-//         for (size_t i = 0; i < inputs.size(); i++) {
-//             // Load input/output buffers with Tensor
-//             if(batchSize > 1)
-//                 std::cout << "Batch " << i << ":" << std::endl;
-//             if (inputTensorNames.size() == 1)
-//             {
-//                 // Load input/output buffers with Tensor
-//                 std::unique_ptr<zdl::DlSystem::Tensor> inputTensor = loadInputTensor(snpe, inputs[i], inputTensorNames);
-//                 if(!inputTensor)
-//                 {
-//                     return EXIT_FAILURE;
-//                 }
-//                 // Execute the input tensor on the model with SNPE
-//                 execStatus = snpe->execute(inputTensor.get(), outputTensorMap);
-//             }
-//             else
-//             {
-//                 std::vector<std::unique_ptr<zdl::DlSystem::Tensor>> inputTensors(inputTensorNames.size());
-//                 zdl::DlSystem::TensorMap inputTensorMap;
-//                 int inputLoadStatus = false;
-//                 // Load input/output buffers with TensorMap
-//                 std::tie(inputTensorMap, inputLoadStatus) = loadMultipleInput(snpe, inputs[i], inputTensorNames, inputTensors);
-//                 if(!inputLoadStatus)
-//                 {
-//                     return EXIT_FAILURE;
-//                 }
-//                 // Execute the multiple input tensorMap on the model with SNPE
-//                 execStatus = snpe->execute(inputTensorMap, outputTensorMap);
-//             }
-//             // Save the execution results if execution successful
-//             if (execStatus == true)
-//             {
-//                if(!saveOutput(outputTensorMap, OutputDir, i * batchSize, batchSize))
-//                {
-//                    return EXIT_FAILURE;
-//                }
-//             }
-//             else
-//             {
-//                std::cerr << "Error while executing the network." << std::endl;
-//             }
-//         }
-// // }
 #include "core/utils.h"
 namespace aisdk {
 class SnpeModelPrivate
@@ -141,7 +48,7 @@ public:
         std::vector<TensorShape> input_shapes;
         for (auto& input_tensor : input_tensors_) {
             TensorShape input_shape;
-            input_tensor.GetShape(input_shape);
+            input_tensor->GetShape(input_shape);
             input_shapes.push_back(input_shape);
         }
 
@@ -153,7 +60,7 @@ public:
         std::vector<TensorShape> output_shapes;
         for (auto& output_tensor : output_tensors_) {
             TensorShape output_shape;
-            output_tensor.GetShape(output_shape);
+            output_tensor->GetShape(output_shape);
             output_shapes.push_back(output_shape);
         }
 
@@ -165,7 +72,7 @@ public:
         std::vector<DataType> data_types;
         for (auto& input_tensor : input_tensors_) {
             DataType data_type;
-            input_tensor.GetDataType(data_type);
+            input_tensor->GetDataType(data_type);
             data_types.push_back(data_type);
         }
 
@@ -177,7 +84,7 @@ public:
         std::vector<DataType> data_types;
         for (auto& output_tensor : output_tensors_) {
             DataType data_type;
-            output_tensor.GetDataType(data_type);
+            output_tensor->GetDataType(data_type);
             data_types.push_back(data_type);
         }
 
@@ -189,7 +96,7 @@ public:
         std::vector<Layout> input_layouts;
         for (auto& input_tensor : input_tensors_) {
             Layout input_layout;
-            input_tensor.GetLayout(input_layout);
+            input_tensor->GetLayout(input_layout);
             input_layouts.push_back(input_layout);
         }
 
@@ -201,7 +108,7 @@ public:
         std::vector<Layout> output_layouts;
         for (auto& output_tensor : output_tensors_) {
             Layout output_layout;
-            output_tensor.GetLayout(output_layout);
+            output_tensor->GetLayout(output_layout);
             output_layouts.push_back(output_layout);
         }
 
@@ -212,7 +119,7 @@ public:
     {
         std::vector<std::string> input_names;
         for (auto& input_tensor : input_tensors_) {
-            input_names.push_back(input_tensor.GetName());
+            input_names.push_back(input_tensor->GetName());
         }
 
         return input_names;
@@ -222,18 +129,18 @@ public:
     {
         std::vector<std::string> output_names;
         for (auto& output_tensor : output_tensors_) {
-            output_names.push_back(output_tensor.GetName());
+            output_names.push_back(output_tensor->GetName());
         }
 
         return output_names;
     }
 
-    std::vector<Tensor> GetInputTensors()
+    std::vector<TensorPtr> GetInputTensors()
     {
         return input_tensors_;
     }
 
-    std::vector<Tensor> GetOutputTensors()
+    std::vector<TensorPtr> GetOutputTensors()
     {
         return output_tensors_; 
     }
@@ -252,8 +159,8 @@ private:
     std::unique_ptr<zdl::DlContainer::IDlContainer> container_;
     std::unique_ptr<zdl::SNPE::SNPE> snpe_;
 
-    std::vector<Tensor> input_tensors_;
-    std::vector<Tensor> output_tensors_;
+    std::vector<TensorPtr> input_tensors_;
+    std::vector<TensorPtr> output_tensors_;
 };
 }
 
@@ -271,9 +178,13 @@ SnpeModelPrivate::~SnpeModelPrivate()
 
 int SnpeModelPrivate::Init()
 {
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModelPrivate::Init");
+
     zdl::SNPE::SNPEFactory::initializeLogging(zdl::DlSystem::LogLevel_t::LOG_ERROR, "./Log");
 
     zdl::SNPE::SNPEFactory::setLogLevel(zdl::DlSystem::LogLevel_t::LOG_WARN);
+
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModelPrivate::Init end");
     return true;
 }
 
@@ -298,11 +209,15 @@ static DataType elementType2DataType(Snpe_UserBufferEncoding_ElementType_t elemn
 
 int SnpeModelPrivate::Load(const std::string& model_path)
 {
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModelPrivate::Load");
+
     std::unique_ptr<zdl::DlContainer::IDlContainer> container = zdl::DlContainer::IDlContainer::open(zdl::DlSystem::String(model_path.c_str()));
     if (container == nullptr)
     {
        return false;
     }
+
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModelPrivate::Load container success");
 
     std::unique_ptr<zdl::SNPE::SNPE> snpe;
     zdl::DlSystem::PlatformConfig platformConfig;
@@ -322,11 +237,13 @@ int SnpeModelPrivate::Load(const std::string& model_path)
     {
        return false;
     }
-
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModelPrivate::Load snpe build success");
+    
     // 获取多个input的名称
     DlSystem::StringList input_name_list = snpe->getInputTensorNames();
     for (size_t i = 0; i < input_name_list.size(); ++i) {
         const char* name = input_name_list.at(i);
+        AISDK_LOG_TRACE("[registry] [snpe] input tensor name: {}", name);
         // get attributes of buffer by name
         DlSystem::IBufferAttributes* bufferAttributesOptHandle = snpe->getInputOutputBufferAttributes(name);
         if (nullptr == bufferAttributesOptHandle) {
@@ -334,6 +251,16 @@ int SnpeModelPrivate::Load(const std::string& model_path)
         }
 
         DlSystem::TensorShape tensor_shape = bufferAttributesOptHandle->getDims();
+        
+        // 循环tensor_shape，合并为“[1,2,3,4]”
+        std::string tensor_shape_str;
+        for (size_t j = 0; j < tensor_shape.rank(); j++) {
+            tensor_shape_str += std::to_string(tensor_shape[j]);
+            if (j < tensor_shape.rank() - 1) {
+                tensor_shape_str += ",";
+            }
+        }
+        AISDK_LOG_TRACE("[registry] [snpe] input tensor shape: {}", tensor_shape_str);
 
         aisdk::TensorShape shape;
         shape.dim = tensor_shape.rank();
@@ -344,8 +271,9 @@ int SnpeModelPrivate::Load(const std::string& model_path)
 
         Snpe_UserBufferEncoding_ElementType_t elemnet_type = Snpe_IBufferAttributes_GetEncodingType(bufferAttributesOptHandle);
         DataType data_type = elementType2DataType(elemnet_type);
+        AISDK_LOG_TRACE("[registry] [snpe] input tensor data type: {}", (int)data_type);
 
-        Tensor input_tensor(std::string(name), shape, data_type);
+        TensorPtr input_tensor = std::make_shared<Tensor>(std::string(name), shape, data_type);
         input_tensors_.emplace_back(input_tensor);
     }
 
@@ -361,6 +289,15 @@ int SnpeModelPrivate::Load(const std::string& model_path)
 
         DlSystem::TensorShape tensor_shape = bufferAttributesOptHandle->getDims();
 
+        std::string tensor_shape_str;
+        for (size_t j = 0; j < tensor_shape.rank(); j++) {
+            tensor_shape_str += std::to_string(tensor_shape[j]);
+            if (j < tensor_shape.rank() - 1) {
+                tensor_shape_str += ",";
+            }
+        }
+        AISDK_LOG_TRACE("[registry] [snpe] output tensor shape: {}", tensor_shape_str);
+
         aisdk::TensorShape shape;
         shape.dim = tensor_shape.rank();
         std::vector<size_t> tensorShape;
@@ -370,11 +307,12 @@ int SnpeModelPrivate::Load(const std::string& model_path)
 
         Snpe_UserBufferEncoding_ElementType_t elemnet_type = Snpe_IBufferAttributes_GetEncodingType(bufferAttributesOptHandle);
         DataType data_type = elementType2DataType(elemnet_type);
-
-        Tensor output_tensor(std::string(name), shape, data_type);
+        AISDK_LOG_TRACE("[registry] [snpe] output tensor data type: {}", (int)data_type);
+        TensorPtr output_tensor = std::make_shared<Tensor>(std::string(name), shape, data_type);
         output_tensors_.emplace_back(output_tensor);
     }
 
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModelPrivate::Load end");
 
     return true;
 }
@@ -387,107 +325,111 @@ int SnpeModelPrivate::Unload()
 
 SnpeModel::SnpeModel(const std::string& model_path)
 {
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModel::SnpeModel {}", model_path);
     priv_ = std::shared_ptr<SnpeModelPrivate>(new SnpeModelPrivate());
-    priv_->Init();
+    if (priv_->Init() != 0) {
+        AISDK_LOG_ERROR("[registry] [snpe] SnpeModel::SnpeModel init failed");
+    }
+
+    if (priv_->Load(model_path) != 0) {
+        AISDK_LOG_ERROR("[registry] [snpe] SnpeModel::SnpeModel load failed");
+    }
+
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModel::SnpeModel end");
 }
 
 SnpeModel::~SnpeModel()
 {
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModel::~SnpeModel");
     priv_->Unload();
 }
 
 int SnpeModel::Load(const std::string& model_path)
 {
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModel::Load {}", model_path);
     return priv_->Load(model_path);
 }
 
 int SnpeModel::Unload()
 {
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeModel::Unload");
     return priv_->Unload();
 }
 
 // 获取模型输入输出的个数
-int SnpeModel::GetInputCount(int& input_count)
+int SnpeModel::GetInputCount()
 {
-    input_count = priv_->GetInputCount();
-    return true;
+    return priv_->GetInputCount();
 }
 
-int SnpeModel::GetOutputCount(int& output_count)
+int SnpeModel::GetOutputCount()
 {
-    output_count = priv_->GetOutputCount();
-    return true;
+    return priv_->GetOutputCount();
 }
 
 // 获取模型输入输出的shape
-int SnpeModel::GetInputShape(std::vector<TensorShape>& input_shapes)
+std::vector<TensorShape> SnpeModel::GetInputShape()
 {
-    input_shapes = priv_->GetInputShape();
-    return true;
+    return priv_->GetInputShape();
 }
 
-int SnpeModel::GetOutputShape(std::vector<TensorShape>& output_shapes)
+std::vector<TensorShape> SnpeModel::GetOutputShape()
 {
-    output_shapes = priv_->GetOutputShape();
-    return true;
+    return priv_->GetOutputShape();
 }
 
 // 获取模型输入输出的dtype
-int SnpeModel::GetInputDtype(std::vector<DataType>& input_dtypes)
+std::vector<DataType> SnpeModel::GetInputDtype()
 {
-    input_dtypes = priv_->GetInputDtype();
-    return true;
+    return priv_->GetInputDtype();
 }
 
-int SnpeModel::GetOutputDtype(std::vector<DataType>& output_dtypes)
+std::vector<DataType> SnpeModel::GetOutputDtype()
 {
-    output_dtypes = priv_->GetOutputDtype();
-    return true;
+    return priv_->GetOutputDtype();
 }
 
 // 获取模型输入输出的layout
-int SnpeModel::GetInputLayout(std::vector<Layout>& input_layouts)
+std::vector<Layout> SnpeModel::GetInputLayout()
 {
-    input_layouts = priv_->GetInputLayout();
-    return true;
+    return priv_->GetInputLayout();
 }
 
-int SnpeModel::GetOutputLayout(std::vector<Layout>& output_layouts)
+std::vector<Layout> SnpeModel::GetOutputLayout()
 {
-    output_layouts = priv_->GetOutputLayout();
-    return true;
+    return priv_->GetOutputLayout();
 }
 
 // 获取模型输入输出的name
-int SnpeModel::GetInputName(std::vector<std::string>& input_names)
+std::vector<std::string> SnpeModel::GetInputName()
 {
-    input_names = priv_->GetInputName();
-    return true;
+    return priv_->GetInputName();
 }
 
-int SnpeModel::GetOutputName(std::vector<std::string>& output_names)
+std::vector<std::string> SnpeModel::GetOutputName()
 {
-    output_names = priv_->GetOutputName();
-    return true;
+    return priv_->GetOutputName();
 }
 
-int SnpeModel::GetInputTensor(std::vector<Tensor>& input_tensors) 
+std::vector<TensorPtr> SnpeModel::GetInputTensors() 
 {
-    input_tensors = priv_->GetInputTensors();
-    return 0;
+    return priv_->GetInputTensors();
 }
 
-int SnpeModel::GetOutputTensor(std::vector<Tensor>& output_tensors)
+std::vector<TensorPtr> SnpeModel::GetOutputTensors()
 {
-    output_tensors = priv_->GetOutputTensors();
+    return priv_->GetOutputTensors();
+}
+
+int SnpeModel::GetLabels(std::map<int, std::string>& labels)
+{
     return 0;
 }
 
 // 获取模型的key
-int SnpeModel::GetKey(std::string& key)
+std::string SnpeModel::GetKey()
 {
-    key = priv_->GetKey();
-    return true;
+    return priv_->GetKey();
 }
 
 any SnpeModel::GetModel()

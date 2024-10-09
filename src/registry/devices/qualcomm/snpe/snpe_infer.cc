@@ -15,6 +15,7 @@
 
 #include "core/tensor/tensor.h"
 #include "core/model/model.h"
+#include "common/log.h"
 #include "utils/createUser_buffer.hpp"
 
 #include "SNPE/SNPE.hpp"
@@ -44,8 +45,8 @@ public:
     int Init(std::string config);
 
     // 处理数据
-    int Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output);
-    int Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs);
+    int Process(TensorPtr& input, TensorPtr& output);
+    int Process(std::vector<TensorPtr>& inputs, std::vector<TensorPtr>& outputs);
 
     // 释放资源
     int Finalize();
@@ -74,38 +75,51 @@ public:
 
     // 获取硬件IP
     // 获取输入输出tensor
-    int GetInputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor);
-    int GetOutputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor);
+    std::vector<TensorPtr> GetInputTensors();
+    std::vector<TensorPtr> GetOutputTensors();
 
     // 设置输入输出tensor
-    int SetInputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor);
-    int SetOutputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor);
+    int SetInputTensors(std::vector<TensorPtr>& tensor);
+    int SetOutputTensors(std::vector<TensorPtr>& tensor);
 private:
     ModelPtr model_;
 
+    zdl::DlSystem::UserBufferMap input_map;
+    zdl::DlSystem::UserBufferMap output_map;
+
     std::shared_ptr<zdl::SNPE::SNPE> snpe;
+
+    std::vector<TensorPtr> input_tensors_;
+    std::vector<TensorPtr> output_tensors_;
 };
 
 // 初始化
 int SnpeInferPriv::Init(std::string config)
 {
+    AISDK_LOG_TRACE("[registry] [snpe] SnpeInferPriv::Init");
     std::unique_ptr<zdl::SNPE::SNPE> snpe;
     bool staticQuantization = false;
     int bitWidth = 32;
-    zdl::DlSystem::UserBufferMap inputMap;
-    std::vector <std::unique_ptr<zdl::DlSystem::IUserBuffer>> snpeUserBackedInputBuffers;
+    zdl::DlSystem::UserBufferMap input_map;
+    std::vector<std::unique_ptr<zdl::DlSystem::IUserBuffer>> snpe_user_backed_input_buffers;
     std::unordered_map <std::string, std::vector<uint8_t>> applicationInputBuffers;
-    createInputBufferMap(inputMap, applicationInputBuffers, snpeUserBackedInputBuffers, snpe, true, staticQuantization, bitWidth);
+    createInputBufferMap(input_map, applicationInputBuffers, snpe_user_backed_input_buffers, snpe, true, staticQuantization, bitWidth);
+
+    input_tensors_ = model_->GetInputTensors();
+    output_tensors_ = model_->GetOutputTensors();
+
+    // TODO 给input/output设置tensor，这样上一个节点可以通过GetInputTensor获取tensor，处理后的结果直接写入对应的内存，下一个节点通过GetOutputTensor获取tensor，直接读取数据即可。
 
     return 0;
 }
 
 // 处理数据
-int SnpeInferPriv::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output)
+int SnpeInferPriv::Process(TensorPtr& input, TensorPtr& output)
 {
     // 检查input是否为空
     if (input == nullptr)
     {
+        AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process input is nullptr");
         return -1;
     }
 
@@ -113,40 +127,240 @@ int SnpeInferPriv::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tenso
     if (output == nullptr)
     {
         // TODO: 创建output
+        AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process output is nullptr");
+        return -1;
     }
 
-    // 将input数据封装为inputMap
-    zdl::DlSystem::UserBufferMap inputMap;
-    std::vector <std::unique_ptr<zdl::DlSystem::IUserBuffer>> snpeUserBackedInputBuffers;
+    // 将input数据封装为input_map
+    zdl::DlSystem::UserBufferMap input_map;
+    zdl::DlSystem::UserBufferMap output_map;
 
+    void *input_data = nullptr;
+    if ( 0 != input->GetData(input_data)) {
+        AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process input->GetData failed");
+        return -1;
+    }
 
-    // void *input_data = nullptr;
-    // if ( 0 != input->GetData(input_data)) {
-    //     return -1;
-    // }
+    {
+        std::vector <std::unique_ptr<zdl::DlSystem::IUserBuffer>> snpe_user_backed_input_buffers;
 
-    // // create SNPE user buffer from the user-backed buffer
-    // zdl::DlSystem::IUserBufferFactory& ubFactory = zdl::SNPE::SNPEFactory::getUserBufferFactory();
-    // snpeUserBackedInputBuffers.push_back(ubFactory.createUserBuffer(input_data,
-    //                                                             bufSize,
-    //                                                             strides,
-    //                                                             userBufferEncoding.get()));
-    // if (snpeUserBackedBuffers.back() == nullptr)
-    // {
-    //     return -1;
-    // }
-    // // add the user-backed buffer to the inputMap, which is later on fed to the network for execution
-    // inputMap.add(name, snpeUserBackedBuffers.back().get());
+        size_t buf_size;
+        input->GetDataSize(buf_size);
+        AISDK_LOG_TRACE("[registry] [snpe] SnpeInferPriv::Process input data size: {}", buf_size);
 
+        // std::vector<int64_t> strides = {0};
+        // zdl::DlSystem::TensorShape strides ;
+        TensorShape input_shape;
+        input_tensors_[0]->GetShape(input_shape);
 
-    // // Execute the multiple input tensorMap on the model with SNPE
-    // execStatus = snpe->execute(inputMap, outputTensorMap);
+        std::vector<size_t> strides(input_shape.dim);
+        strides[strides.size() - 1] = sizeof(float);
+        size_t stride = strides[strides.size() - 1];
+        for (size_t i = input_shape.dim - 1; i > 0; i--)
+        {
+            stride *= input_shape.shape[i];
+            strides[i-1] = stride;
+        }
+        AISDK_LOG_TRACE("[registry] [snpe] SnpeInferPriv::Process input strides: [{}, {}, {}, {}]", strides[0], strides[1], strides[2], strides[3]);
+
+        std::vector<std::string> names = model_->GetInputName();
+        std::string name = names[0];
+        AISDK_LOG_TRACE("[registry] [snpe] SnpeInferPriv::Process input name: %s", name.c_str());
+
+        // create SNPE user buffer from the user-backed buffer
+        zdl::DlSystem::UserBufferEncodingFloat userBufferEncodingFloat;
+        zdl::DlSystem::IUserBufferFactory& ubFactory = zdl::SNPE::SNPEFactory::getUserBufferFactory();
+        // void *buffer,
+        //                                             size_t bufSize,
+        //                                             const TensorShape &strides,
+        //                                             UserBufferEncoding* userBufferEncoding,
+        //                                             UserBufferSource* userBufferSource
+        snpe_user_backed_input_buffers.push_back(ubFactory.createUserBuffer(input_data,
+                                                                    buf_size,
+                                                                    strides,
+                                                                    &userBufferEncodingFloat, nullptr));
+        if (snpe_user_backed_input_buffers.back() == nullptr)
+        {
+            AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process createUserBuffer failed");
+            return -1;
+        }
+        // add the user-backed buffer to the input_map, which is later on fed to the network for execution
+        input_map.add(name.c_str(), snpe_user_backed_input_buffers.back().get());
+    }
+    // 将output数据封装为output_map
+    
+    {
+        
+        std::vector <std::unique_ptr<zdl::DlSystem::IUserBuffer>> snpe_user_backed_output_buffers;
+
+        size_t buf_size;
+        output->GetDataSize(buf_size);
+
+        // std::vector<int64_t> strides = {0};
+        // zdl::DlSystem::TensorShape strides ;
+        TensorShape output_shape;
+        output_tensors_[0]->GetShape(output_shape);
+
+        std::vector<size_t> strides(output_shape.dim);
+        strides[strides.size() - 1] = sizeof(float);
+        size_t stride = strides[strides.size() - 1];
+        for (size_t i = output_shape.dim - 1; i > 0; i--)
+        {
+            stride *= output_shape.shape[i];
+            strides[i-1] = stride;
+        }
+        AISDK_LOG_TRACE("[registry] [snpe] SnpeInferPriv::Process output strides: [{}, {}, {}, {}]", strides[0], strides[1], strides[2], strides[3]);
+
+        std::vector<std::string> names = model_->GetOutputName();
+        std::string name = names[0];
+        AISDK_LOG_TRACE("[registry] [snpe] SnpeInferPriv::Process output name: {}", name);
+
+        void *output_data = nullptr;
+        if ( 0 != output->GetData(output_data)) {
+            AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process output->GetData failed");
+            return -1;
+        }
+
+        // create SNPE user buffer from the user-backed buffer
+        zdl::DlSystem::UserBufferEncodingFloat userBufferEncodingFloat;
+        zdl::DlSystem::IUserBufferFactory& ubFactory = zdl::SNPE::SNPEFactory::getUserBufferFactory();
+        snpe_user_backed_output_buffers.push_back(ubFactory.createUserBuffer(output_data,
+                                                                    buf_size,
+                                                                    strides,
+                                                                    &userBufferEncodingFloat, nullptr));
+        if (snpe_user_backed_output_buffers.back() == nullptr)
+        {
+            AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process createUserBuffer failed");
+            return -1;
+        }
+        // add the user-backed buffer to the output_map, which is later on fed to the network for execution
+        output_map.add(name.c_str(), snpe_user_backed_output_buffers.back().get());
+    }
+
+    // 执行推理
+    if ( false == snpe->execute(input_map, output_map))
+    {
+        AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process execute failed");
+        return -1;
+    }
 
     return 0;
 }
 
-int SnpeInferPriv::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs)
+int SnpeInferPriv::Process(std::vector<TensorPtr>& inputs, std::vector<TensorPtr>& outputs)
 {
+    if (inputs.size() != input_tensors_.size())
+    {
+        AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process inputs size not match");
+        return -1;
+    }
+
+    if (outputs.size() != output_tensors_.size())
+    {
+        AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process outputs size not match");
+        return -1;
+    }
+
+    // 将input数据封装为input_map
+    zdl::DlSystem::UserBufferMap input_map;
+    zdl::DlSystem::UserBufferMap output_map;
+
+    for (size_t i = 0; i < inputs.size(); i++)
+    {
+        std::vector <std::unique_ptr<zdl::DlSystem::IUserBuffer>> snpe_user_backed_input_buffers;
+
+        size_t buf_size;
+        inputs[i]->GetDataSize(buf_size);
+
+        TensorShape input_shape;
+        input_tensors_[i]->GetShape(input_shape);
+        
+        void *input_data = nullptr;
+        if ( 0 != inputs[i]->GetData(input_data)) {
+            AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process input->GetData failed");
+            return -1;
+        }
+
+        std::vector<size_t> strides(input_shape.dim);
+        strides[strides.size() - 1] = sizeof(float);
+        size_t stride = strides[strides.size() - 1];
+        for (size_t i = input_shape.dim - 1; i > 0; i--)
+        {
+            stride *= input_shape.shape[i];
+            strides[i-1] = stride;
+        }
+
+        std::vector<std::string> names = model_->GetOutputName();
+        std::string name = names[i];
+        AISDK_LOG_TRACE("[registry] [snpe] SnpeInferPriv::Process input name: {}", name);
+
+        zdl::DlSystem::UserBufferEncodingFloat userBufferEncodingFloat;
+        zdl::DlSystem::IUserBufferFactory& ubFactory = zdl::SNPE::SNPEFactory::getUserBufferFactory();
+        snpe_user_backed_input_buffers.push_back(ubFactory.createUserBuffer(input_data,
+                                                                    buf_size,
+                                                                    strides,
+                                                                    &userBufferEncodingFloat, nullptr));
+        if (snpe_user_backed_input_buffers.back() == nullptr)
+        {
+            AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process createUserBuffer failed");
+            return -1;
+        }
+        // add the user-backed buffer to the input_map, which is later on fed to the network for execution
+        input_map.add(name.c_str(), snpe_user_backed_input_buffers.back().get());
+    }
+
+    // 将output数据封装为output_map
+    for (size_t i = 0; i < outputs.size(); i++)
+    {
+        std::vector <std::unique_ptr<zdl::DlSystem::IUserBuffer>> snpe_user_backed_output_buffers;
+
+        size_t buf_size;
+        outputs[i]->GetDataSize(buf_size);
+
+        TensorShape output_shape;
+        output_tensors_[i]->GetShape(output_shape); 
+
+        void *output_data = nullptr;
+        if ( 0 != outputs[i]->GetData(output_data)) {
+            AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process output->GetData failed");
+            return -1;
+        }
+
+        std::vector<size_t> strides(output_shape.dim);
+        strides[strides.size() - 1] = sizeof(float);
+        size_t stride = strides[strides.size() - 1];
+        for (size_t i = output_shape.dim - 1; i > 0; i--)
+        {
+            stride *= output_shape.shape[i];
+            strides[i-1] = stride;
+        }
+
+        std::vector<std::string> names = model_->GetOutputName();
+        std::string name = names[i];
+        AISDK_LOG_TRACE("[registry] [snpe] SnpeInferPriv::Process output name: {}", name);
+
+        zdl::DlSystem::UserBufferEncodingFloat userBufferEncodingFloat;
+        zdl::DlSystem::IUserBufferFactory& ubFactory = zdl::SNPE::SNPEFactory::getUserBufferFactory();
+        snpe_user_backed_output_buffers.push_back(ubFactory.createUserBuffer(output_data,
+                                                                    buf_size,
+                                                                    strides,
+                                                                    &userBufferEncodingFloat, nullptr));
+        if (snpe_user_backed_output_buffers.back() == nullptr)
+        {
+            AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process createUserBuffer failed");
+            return -1;
+        }
+        // add the user-backed buffer to the output_map, which is later on fed to the network for execution
+        output_map.add(name.c_str(), snpe_user_backed_output_buffers.back().get());
+    }
+
+    // 执行推理
+    if ( false == snpe->execute(input_map, output_map))
+    {
+        AISDK_LOG_ERROR("[registry] [snpe] SnpeInferPriv::Process execute failed");
+        return -1;
+    }
+
     return 0;
 }
 
@@ -222,162 +436,167 @@ std::string SnpeInferPriv::GetVersion()
 
 // 获取硬件IP
 // 获取输入输出tensor
-int SnpeInferPriv::GetInputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor)
+std::vector<TensorPtr> SnpeInferPriv::GetInputTensors()
 {
-    return 0;
+    return input_tensors_;
 }
 
-int SnpeInferPriv::GetOutputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor)
+std::vector<TensorPtr> SnpeInferPriv::GetOutputTensors()
 {
-    return 0;
+    return output_tensors_;
 }
 
 
 // 设置输入输出tensor
-int SnpeInferPriv::SetInputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor)
+int SnpeInferPriv::SetInputTensors(std::vector<TensorPtr>& tensor)
 {
     return 0;
 }
 
-int SnpeInferPriv::SetOutputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor)
+int SnpeInferPriv::SetOutputTensors(std::vector<TensorPtr>& tensor)
 {
     return 0;
 }
 
 
-SnpeInfer::SnpeInfer()
-{
-
-}
-SnpeInfer::SnpeInfer(const std::string& name): INode(name) 
+SnpeInferNode::SnpeInferNode()
 {
 
 }
 
-SnpeInfer::~SnpeInfer()
+SnpeInferNode::SnpeInferNode(const std::string& name): INode(name) 
+{
+
+}
+
+SnpeInferNode::SnpeInferNode(const std::string& name, ModelPtr model): INode(name, model) 
+{
+    priv_ = std::make_shared<SnpeInferPriv>(model);
+}
+
+SnpeInferNode::~SnpeInferNode()
 {
 
 }
 
 
 // 初始化
-int SnpeInfer::Init(std::string config)
+int SnpeInferNode::Init(std::string config)
 {
-    std::unique_ptr<zdl::SNPE::SNPE> snpe;
-    bool staticQuantization = false;
-    int bitWidth = 32;
-    zdl::DlSystem::UserBufferMap inputMap;
-    std::vector <std::unique_ptr<zdl::DlSystem::IUserBuffer>> snpeUserBackedInputBuffers;
-    std::unordered_map <std::string, std::vector<uint8_t>> applicationInputBuffers;
-    createInputBufferMap(inputMap, applicationInputBuffers, snpeUserBackedInputBuffers, snpe, true, staticQuantization, bitWidth);
+    priv_->Init(config);
 
     return 0;
 }
 
 // 处理数据
-int SnpeInfer::Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output)
+int SnpeInferNode::Process(TensorPtr& input, TensorPtr& output)
 {
+    priv_->Process(input, output);
 
     return 0;
 }
 
-int SnpeInfer::Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs)
+int SnpeInferNode::Process(std::vector<TensorPtr>& inputs, std::vector<TensorPtr>& outputs)
 {
+    priv_->Process(inputs, outputs);
+
     return 0;
 }
 
 
 // 释放资源
-int SnpeInfer::Finalize()
+int SnpeInferNode::Finalize()
 {
+    priv_->Finalize();
+
     return 0;
 }
 
 
 // 获取输入输出节点的数量
-int SnpeInfer::GetInputSize()
+int SnpeInferNode::GetInputSize()
 {
-    return 0;
+    return priv_->GetInputSize();
 }
 
-int SnpeInfer::GetOutputSize()
+int SnpeInferNode::GetOutputSize()
 {
-    return 0;
+    return priv_->GetOutputSize();
 }
 
 
 // 设置输入输出节点
-int SnpeInfer::SetInput(const std::vector<std::shared_ptr<INode>>& inputs)
+int SnpeInferNode::SetInput(const std::vector<std::shared_ptr<INode>>& inputs)
 {
-    return 0;
+    return priv_->SetInput(inputs);
 }
 
-int SnpeInfer::SetOutput(const std::vector<std::shared_ptr<INode>>& outputs)
+int SnpeInferNode::SetOutput(const std::vector<std::shared_ptr<INode>>& outputs)
 {
-    return 0;
+    return priv_->SetOutput(outputs);
 }
 
 
 // 获取输入输出节点
-int SnpeInfer::GetInput(std::vector<std::shared_ptr<INode>>& inputs)
+int SnpeInferNode::GetInput(std::vector<std::shared_ptr<INode>>& inputs)
 {
-    return 0;
+    return priv_->GetInput(inputs);
 }
 
-int SnpeInfer::GetOutput(std::vector<std::shared_ptr<INode>>& outputs)
+int SnpeInferNode::GetOutput(std::vector<std::shared_ptr<INode>>& outputs)
 {
-    return 0;
+    return priv_->GetOutput(outputs);
 }
 
 
 // 获取参数
-int SnpeInfer::GetParam(const std::string& key, std::string& value)
+int SnpeInferNode::GetParam(const std::string& key, std::string& value)
 {
-    return 0;
+    return priv_->GetParam(key, value);
 }
 
 // 设置参数
-int SnpeInfer::SetParam(const std::string& key, const std::string& value)
+int SnpeInferNode::SetParam(const std::string& key, const std::string& value)
 {
-    return 0;
+    return priv_->SetParam(key, value);
 }
 
 
 // 获取硬件IP
-std::string SnpeInfer::GetIP()
+std::string SnpeInferNode::GetIP()
 {
-    return 0;
+    return priv_->GetIP();
 }
 
 // 获取版本号
-std::string SnpeInfer::GetVersion()
+std::string SnpeInferNode::GetVersion()
 {
-    return 0;
+    return priv_->GetVersion();
 }
 
 
 // 获取硬件IP
 // 获取输入输出tensor
-int SnpeInfer::GetInputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor)
-{
-    return 0;
-}
+// std::vector<TensorPtr> SnpeInferNode::GetInputTensors()
+// {
+//     return priv_->GetInputTensors();
+// }
 
-int SnpeInfer::GetOutputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor)
-{
-    return 0;
-}
+// std::vector<TensorPtr> SnpeInferNode::GetOutputTensors()
+// {
+//     return priv_->GetOutputTensors();
+// }
 
 
 // 设置输入输出tensor
-int SnpeInfer::SetInputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor)
+int SnpeInferNode::SetInputTensors(std::vector<TensorPtr>& tensor)
 {
-    return 0;
+    return priv_->SetInputTensors(tensor);
 }
 
-int SnpeInfer::SetOutputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor)
+int SnpeInferNode::SetOutputTensors(std::vector<TensorPtr>& tensor)
 {
-    return 0;
+    return priv_->SetOutputTensors(tensor);
 }
 
 

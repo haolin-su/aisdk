@@ -5,7 +5,16 @@ using namespace aisdk;
 // 初始化
 int Tensor::Init() {
     // 初始化内存管理
-    mem_ptr_ = std::make_shared<IMemory>();
+    auto mem_creator = MemoryManager::GetInstance()->GetMemoryCreator(mem_type_);
+    mem_ptr_ = mem_creator->Create(data_size_);
+    if (data_size_ > 0)
+    {
+        mem_ptr_->Alloc(data_size_);
+        data_ptr_ = mem_ptr_->GetMemPtr();
+        if (data_ptr_ != nullptr) {
+            is_init_ = true;
+        }
+    }
 
     return 0;
 }
@@ -15,8 +24,43 @@ int Tensor::Finalize() {
     return 0;
 }
 
+int Tensor::MallocData()
+{
+    if (data_size_ > 0)
+    {
+        if (mem_ptr_ == nullptr) {
+            mem_ptr_ = MemoryManager::GetInstance()->GetMemoryCreator(mem_type_)->Create(data_size_);
+        }
+        mem_ptr_->Alloc(data_size_);
+        data_ptr_ = mem_ptr_->GetMemPtr();
+        if (data_ptr_ != nullptr) {
+            is_init_ = true;
+        }
+    }
+
+    return 0;
+}
+
+int Tensor::FreeData()
+{
+    if (mem_ptr_ != nullptr) {
+        mem_ptr_->Free();
+        data_ptr_ = nullptr;
+        is_init_ = false;
+    }
+
+    return 0;
+}
+
 // 获取数据
 int Tensor::GetData(void* data) {
+    if (data_ptr_ != nullptr) {
+        // memcpy(data, data_ptr_, data_size_);
+        data = data_ptr_;
+    } else {
+        data = nullptr;
+        return -1;
+    }
     return 0;
 }
 
@@ -83,12 +127,12 @@ int Tensor::SetLayout(const Layout& layout) {
     return 0;
 }
 
-int Tensor::GetMemory(std::shared_ptr<IMemory>& mem_ptr) {
+int Tensor::GetMemory(std::shared_ptr<Memory>& mem_ptr) {
     mem_ptr = mem_ptr_;
     return 0;
 }
 
-int Tensor::SetMemory(const std::shared_ptr<IMemory>& mem_ptr) {
+int Tensor::SetMemory(const std::shared_ptr<Memory>& mem_ptr) {
     mem_ptr_ = mem_ptr;
     return 0;
 }

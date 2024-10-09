@@ -8,7 +8,7 @@
 
 # # 设置x264源码路径
 # set(X264_SRC_PATH ${CMAKE_SOURCE_DIR}/third_party/x264)
-# set(X264_INSTALL_PATH ${CMAKE_SOURCE_DIR}/third_party/ffmpeg-install-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR_ARCH})
+# set(X264_INSTALL_PATH ${CMAKE_SOURCE_DIR}/third_party/ffmpeg-install-${BUILD_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR_ARCH})
 # if (NOT EXISTS ${X264_SRC_PATH})
 #     # 下载x264
 #     file(DOWNLOAD https://code.videolan.org/videolan/x264/-/archive/master/x264-master.tar.gz WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/x264.tar.gz SHOW_PROGRESS)
@@ -21,7 +21,7 @@
 # file(MAKE_DIRECTORY ${FFMPEG_BUILD_PATH})
 
 # # 创建ffmpeg安装目录
-# set(FFMPEG_INSTALL_PATH ${CMAKE_SOURCE_DIR}/third_party/ffmpeg-install-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR_ARCH})
+# set(FFMPEG_INSTALL_PATH ${CMAKE_SOURCE_DIR}/third_party/ffmpeg-install-${BUILD_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR_ARCH})
 # file(MAKE_DIRECTORY ${FFMPEG_INSTALL_PATH})
 
 # # 判断ffmpeg是否存在，不存在则下载源码https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n4.4.5.tar.gz
@@ -50,7 +50,7 @@
 #             message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
 #         endif()
 
-#         if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+#         if (BUILD_SYSTEM_NAME STREQUAL "Android")
 #             # 配置和编译x264
 #             if (NOT EXISTS ${X264_INSTALL_PATH})
 #                 execute_process(COMMAND ${FFMPEG_SRC_PATH}/configure 

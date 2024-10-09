@@ -15,36 +15,48 @@ public:
     virtual int Unload() override;
 
     // 获取模型输入输出的个数
-    virtual int GetInputCount(int& input_count) override;
-    virtual int GetOutputCount(int& output_count) override;
+    virtual int GetInputCount() override;
+    virtual int GetOutputCount() override;
 
     // 获取模型输入输出的shape
-    virtual int GetInputShape(std::vector<TensorShape>& input_shapes) override;
-    virtual int GetOutputShape(std::vector<TensorShape>& output_shapes) override;
+    virtual std::vector<TensorShape> GetInputShape() override;
+    virtual std::vector<TensorShape> GetOutputShape() override;
 
     // 获取模型输入输出的dtype
-    virtual int GetInputDtype(std::vector<DataType>& input_dtypes) override;
-    virtual int GetOutputDtype(std::vector<DataType>& output_dtypes) override;
+    virtual std::vector<DataType> GetInputDtype() override;
+    virtual std::vector<DataType> GetOutputDtype() override;
 
     // 获取模型输入输出的layout
-    virtual int GetInputLayout(std::vector<Layout>& input_layouts) override;
-    virtual int GetOutputLayout(std::vector<Layout>& output_layouts) override;
+    virtual std::vector<Layout> GetInputLayout() override;
+    virtual std::vector<Layout> GetOutputLayout() override;
 
     // 获取模型输入输出的name
-    virtual int GetInputName(std::vector<std::string>& input_names) override;
-    virtual int GetOutputName(std::vector<std::string>& output_names) override;
+    virtual std::vector<std::string> GetInputName() override;
+    virtual std::vector<std::string> GetOutputName() override;
 
     // 获取模型的输入输出的tensor
-    virtual int GetInputTensor(std::vector<Tensor>& input_tensors) override;
-    virtual int GetOutputTensor(std::vector<Tensor>& output_tensors) override;
+    virtual std::vector<TensorPtr> GetInputTensors() override;
+    virtual std::vector<TensorPtr> GetOutputTensors() override;\
+
+    // 获取模型的labels
+    virtual int GetLabels(std::map<int, std::string>& labels) override;
 
     // 获取模型的key
-    virtual int GetKey(std::string& key) override;
+    virtual std::string GetKey() override;
 
     any GetModel() override;
     
 private:
     std::shared_ptr<SnpeModelPrivate> priv_;
+};
+
+class SnpeModelCreator : public ModelCreator {
+public:
+    SnpeModelCreator() : ModelCreator("snpe") {}
+
+    ModelPtr CreateModel(const std::string& model_path) {
+        return std::make_shared<SnpeModel>(model_path);
+    }
 };
 
 }

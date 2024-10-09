@@ -15,7 +15,10 @@ public:
     virtual ~IRegistry() {}
     virtual void registerFactory(const std::string& name, std::function<std::unique_ptr<void>()> factory) = 0;
     virtual std::unique_ptr<void> createInstance(const std::string& name) = 0;
-};
+};    
+
+int RegisterAll();
+
 }
 
 // 这里需要两级注册，比如node/tensor/model概念的注册，然后再是具体的子类实现注册
@@ -63,5 +66,32 @@ public:
     } \
     static void initialize##creator_name() { \
         register##creator_name(); \
+        registry.createInstance(#creator_name); \
+    } \
+    static void destroy##creator_name() { \
+        delete registry; \
+    } \
+    static std::unique_ptr<void> create##creator_name() { \
+        return registry.createInstance(#creator_name); \
+    } \
+    static void register##creator_name##Instance() { \
+        static bool initialized = false; \
+        if (!initialized) { \
+            initialize##creator_name(); \
+            initialized = true; \
+        } \
+    } \
+    static void unregister##creator_name##Instance() { \
+        static bool initialized = true; \
+        if (initialized) { \
+            destroy##creator_name(); \
+            initialized = false; \
+        } \
+    } \
+    static std::unique_ptr<void> get##creator_name##Instance() { \
+        register##creator_name##Instance(); \
+        return create##creator_name(); \
+    } \
+
 
 #endif // FIBO_REGISTRY_H

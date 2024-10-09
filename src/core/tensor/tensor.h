@@ -7,7 +7,7 @@
 
 #include "core/mem/mem.h"
 #include "core/tensor/meta_data.h"
-#include "../utils.h"
+#include "core/utils.h"
 // #include "registry.h"
 
 namespace aisdk {
@@ -20,9 +20,11 @@ public:
     Tensor(const std::string& name) : name_(name) {}
     Tensor(const std::string& name, const TensorShape& shape, const size_t& data_size) : name_(name), shape_(shape), data_size_(data_size), data_ptr_(nullptr) {}
     Tensor(const std::string& name, const TensorShape& shape, const DataType& dtype) : name_(name), shape_(shape), dtype_(dtype), data_size_(0), data_ptr_(nullptr) {}
+    Tensor(const std::string& name, const TensorShape& shape, const DataType& dtype, const Layout& layout) : name_(name), shape_(shape), dtype_(dtype), data_size_(0), data_ptr_(nullptr), layout_(layout) {}
     Tensor(const std::string& name, const TensorShape& shape, const DataType& dtype, const size_t& data_size) : name_(name), shape_(shape), dtype_(dtype), data_size_(data_size), data_ptr_(nullptr) {}
     Tensor(const std::string& name, const TensorShape& shape, const size_t& data_size, void* data_ptr) : name_(name), shape_(shape), data_size_(data_size), data_ptr_(data_ptr) {}
     Tensor(const std::string& name, const TensorShape& shape, const DataType& dtype, const size_t& data_size, void* data_ptr) : name_(name), shape_(shape), dtype_(dtype), data_size_(data_size), data_ptr_(data_ptr) {}
+    Tensor(const std::string& name, const TensorShape& shape, const DataType& dtype, const Layout& layout, const size_t& data_size, void* data_ptr) : name_(name), shape_(shape), dtype_(dtype), layout_(layout), data_size_(data_size), data_ptr_(data_ptr) {}
     
     Tensor(const Tensor& other) : name_(other.name_), shape_(other.shape_), dtype_(other.dtype_), data_size_(other.data_size_), data_ptr_(other.data_ptr_) {}
     virtual ~Tensor() {}
@@ -34,6 +36,11 @@ public:
 
     // 释放资源
     virtual int Finalize();
+
+    // 分配数据
+    virtual int MallocData();
+    // 释放数据
+    virtual int FreeData();
 
     // 获取数据
     virtual int GetData(void* data);
@@ -66,17 +73,28 @@ public:
     virtual int SetDataPtr(void* data_ptr);
 
     // 获取内存管理器
-    virtual int GetMemory(IMemoryPtr& mem_ptr);
+    virtual int GetMemory(MemoryPtr& mem_ptr);
     // 设置内存管理器
-    virtual int SetMemory(const IMemoryPtr& mem_ptr);
+    virtual int SetMemory(const MemoryPtr& mem_ptr);
 
     bool IsData()
     {
         return (data_ptr_ != nullptr) ? true : false;
     }
 
+    bool IsDataOwner()
+    {
+        return is_data_owner_;
+    }
+
+    bool IsInit()
+    {
+        return is_init_;
+    }
+
+
     // 元数据
-    MetaDataPtr meta_data_ptr_;
+    MetaDataPtr meta_data_ptr;
 
 private:
     std::string name_;
@@ -87,8 +105,12 @@ private:
     size_t data_size_;     // data size
     void* data_ptr_;       // data pointer
 
+    bool is_init_;         // 是否初始化
+    bool is_data_owner_;   // 是否是数据所有者
+
     // 内存管理
-    IMemoryPtr mem_ptr_;
+    MemoryType mem_type_;
+    MemoryPtr mem_ptr_;
 
     // 4个保留位
     uint32_t reserved_[4];

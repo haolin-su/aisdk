@@ -1,4 +1,4 @@
-#include "api/api_nlp.h"
+#include "fibo/api/api_nlp.h"
 
 using namespace aisdk;
 
@@ -42,7 +42,7 @@ int NLPAPI::Release() {
 // }
 
 
-std::string GenerateSync(std::vector<int>& text, result::ResultNLP_Text result, int timeout, const std::string tag)
+std::string GenerateSync(std::vector<int>& text, result::ResultNLP_Text result, int timeout)
 {
     return "";
 }
@@ -64,8 +64,8 @@ int NLPAPI::Generate(std::vector<int>& text, NLPInferAsyncCallback cb, int timeo
 // 功能说明：获取模型信息
 // 参数说明：
 // 返回值：模型信息结构体
-FIBO_NLP_Model NLPAPI::GetModelInfo() {
-    return FIBO_NLP_Model();
+int NLPAPI::GetModelInfo(FIBO_NLP_Model &model_info) {
+    return 0;
 }
 
 // 等待任务完成

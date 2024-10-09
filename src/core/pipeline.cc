@@ -1,4 +1,4 @@
-#include "pipeline.h"
+#include "fibo/pipeline.h"
 
 using namespace aisdk;
 

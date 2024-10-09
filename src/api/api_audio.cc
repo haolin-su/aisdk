@@ -1,4 +1,4 @@
-#include "api/api_audio.h"
+#include "fibo/api/api_audio.h"
 
 using namespace aisdk;
 
@@ -29,6 +29,11 @@ int Audio::Release()
 //     return 0;
 // }
 
+int Audio::transcribeSync(FIBO_Audio audio, result::ResultNLP_Audio_Transalte &result, int timeout)
+{
+    return 0;
+}
+
 
 // 音频翻译
 // 功能说明：根据输入的wav音频文件进行音频翻译，异步执行，需要配合回调函数和WaitTaskDone函数使用
@@ -36,7 +41,7 @@ int Audio::Release()
 //  audio 可以传wav 文件路径或音频原始数组, 传文件则在transcribe 加载音频数据,传音频原始数据则由用户给定
 //  result 是转录的结果
 // 返回值：错误码
-int Audio::transcribe(FIBO_Audio audio , AudioInferAsyncCallback cb, int timeout, const std::string tag)
+int Audio::transcribeAsync(FIBO_Audio audio , AudioInferAsyncCallback cb, int timeout, const std::string tag)
 {
     return 0;
 }
@@ -45,10 +50,10 @@ int Audio::transcribe(FIBO_Audio audio , AudioInferAsyncCallback cb, int timeout
 // 功能说明：获取模型信息
 // 参数说明：
 // 返回值：模型信息结构体
-// FIBO_Algorithm Audio::get_model_info()
-// {
-//     return FIBO_Algorithm();
-// }
+int Audio::get_model_info(FIBO_Audio_Model &model_info)
+{
+    return 0;
+}
 
 // 等待任务完成
 // 参数说明：

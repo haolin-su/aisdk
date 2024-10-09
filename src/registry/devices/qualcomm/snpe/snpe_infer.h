@@ -6,18 +6,19 @@
 namespace aisdk {
 
 class SnpeInferPriv;
-class SnpeInfer : public INode {
+class SnpeInferNode : public INode {
 public:
-    SnpeInfer();
-    SnpeInfer(const std::string& name);
-    ~SnpeInfer();
+    SnpeInferNode();
+    SnpeInferNode(const std::string& name);
+    SnpeInferNode(const std::string& name, ModelPtr model);
+    ~SnpeInferNode();
 
     // 初始化
     int Init(std::string config) override;
 
     // 处理数据
-    int Process(std::shared_ptr<Tensor>& input, std::shared_ptr<Tensor>& output) override;
-    int Process(std::vector<std::shared_ptr<Tensor>>& inputs, std::vector<std::shared_ptr<Tensor>>& outputs) override;
+    int Process(TensorPtr& input, TensorPtr& output) override;
+    int Process(std::vector<TensorPtr>& inputs, std::vector<TensorPtr>& outputs) override;
 
     // 释放资源
     int Finalize() override;
@@ -46,16 +47,25 @@ public:
 
     // 获取硬件IP
     // 获取输入输出tensor
-    int GetInputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor) override;
-    int GetOutputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor) override;
+    // std::vector<TensorPtr> GetInputTensors() override;
+    // std::vector<TensorPtr> GetOutputTensors() override;
 
     // 设置输入输出tensor
-    int SetInputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor) override;
-    int SetOutputTensor(const std::string& key, std::shared_ptr<Tensor>& tensor) override;
+    int SetInputTensors(std::vector<TensorPtr>& tensor) override;
+    int SetOutputTensors(std::vector<TensorPtr>& tensor) override;
     
 private:
-    SnpeInferPriv* priv_;
+    std::shared_ptr<SnpeInferPriv> priv_;
 };
+
+class SnpeInferNodeCreator : public NodeCreator {
+public:
+    virtual std::shared_ptr<INode> CreateNode(const std::string& name, const std::string& config_file = "") override
+    {
+        return std::make_shared<SnpeInferNode>(name);
+    }
+};
+
 
 } // namespace aisdk
 

@@ -1,6 +1,6 @@
 # qnn根目录，获取环境变量qualcomm_QNN_ROOT
 set(QNN_ROOT_DIR $ENV{QUALCOMMON_SDK_SNPE_ROOT})
-
+set(QNN_ROOT_DIR /opt/qcom/aistack/qairt/2.26.2.240911)
 # 获取QNN的版本信息，通过环境变量qualcomm_QNN_VERSION
 set(QNN_VERSION $ENV{qualcomm_QNN_VERSION})
 
@@ -29,11 +29,11 @@ if (QNN_FOUND)
 
     # 根据交叉编译的类型决定使用哪个动态库路径
     message(STATUS "CMAKE_SYSTEM_PROCESSOR_ARCH: ${CMAKE_SYSTEM_PROCESSOR_ARCH}")
-    message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
+    message(STATUS "BUILD_SYSTEM_NAME: ${BUILD_SYSTEM_NAME}")
     message(STATUS "CMAKE_CXX_VERSION: ${CMAKE_CXX_VERSION}")
     message(STATUS "CMAKE_DSP_VERSION: ${CMAKE_DSP_VERSION}")
     if (CMAKE_SYSTEM_PROCESSOR_ARCH STREQUAL "aarch64")
-        if (CMAKE_SYSTEM_NAME STREQUAL "oe")
+        if (BUILD_SYSTEM_NAME STREQUAL "oe")
             if (CMAKE_CXX_VERSION VERSION_GREATER_EQUAL 8.2)
                 set(QNN_LIBRARIES_DIRS ${QNN_LIBRARIES_DIRS}/aarch64-oe-linux-gcc8.2)
             elseif (CMAKE_CXX_VERSION VERSION_GREATER_EQUAL 9.3)
@@ -41,25 +41,25 @@ if (QNN_FOUND)
             elseif (CMAKE_CXX_VERSION VERSION_GREATER_EQUAL 11.2)
                 set(QNN_LIBRARIES_DIRS ${QNN_LIBRARIES_DIRS}/aarch64-oe-linux-gcc11.2)
             else()
-                message(FATAL_ERROR "Unsupported compiler: ${CMAKE_SYSTEM_PROCESSOR_ARCH}-${CMAKE_SYSTEM_NAME}-${CMAKE_CXX_VERSION}")
+                message(FATAL_ERROR "Unsupported compiler: ${CMAKE_SYSTEM_PROCESSOR_ARCH}-${BUILD_SYSTEM_NAME}-${CMAKE_CXX_VERSION}")
             endif()
-        elseif (CMAKE_SYSTEM_NAME STREQUAL "ubuntu")
+        elseif (BUILD_SYSTEM_NAME STREQUAL "ubuntu")
             if (CMAKE_CXX_VERSION VERSION_GREATER_EQUAL 7.5)
                 set(QNN_LIBRARIES_COMMON_DIRS ${QNN_LIBRARIES_DIRS}/aarch64-oe-linux-gcc7.5)
             elseif (CMAKE_CXX_VERSION VERSION_GREATER_EQUAL 9.4)
-                set(QNN_LIBRARIES_COMMON_DIRS ${QNN_LIBRARIES_DIRS}/aarch64-oe-linuxapt -gcc9.4)
+                set(QNN_LIBRARIES_COMMON_DIRS ${QNN_LIBRARIES_DIRS}/aarch64-oe-linux-gcc9.4)
             else()
-                message(FATAL_ERROR "Unsupported compiler: ${CMAKE_SYSTEM_PROCESSOR_ARCH}@${CMAKE_SYSTEM_NAME}-${CMAKE_CXX_VERSION}")
+                message(FATAL_ERROR "Unsupported compiler: ${CMAKE_SYSTEM_PROCESSOR_ARCH}-${BUILD_SYSTEM_NAME}-${CMAKE_CXX_VERSION}")
             endif()
-        elseif (CMAKE_SYSTEM_NAME STREQUAL "windows")
+        elseif (BUILD_SYSTEM_NAME STREQUAL "windows")
             set(QNN_LIBRARIES_COMMON_DIRS ${QNN_LIBRARIES_DIRS}/aarch64-windows-msvc)
-        elseif (CMAKE_SYSTEM_NAME STREQUAL "android")
+        elseif (BUILD_SYSTEM_NAME STREQUAL "android")
             set(QNN_LIBRARIES_COMMON_DIRS ${QNN_LIBRARIES_DIRS}/aarch64-android)
         else()
-            message(FATAL_ERROR "Unsupported compiler: ${CMAKE_SYSTEM_PROCESSOR_ARCH}-${CMAKE_SYSTEM_NAME}")
+            message(FATAL_ERROR "Unsupported compiler: ${CMAKE_SYSTEM_PROCESSOR_ARCH}-${BUILD_SYSTEM_NAME}")
         endif()
     elseif (CMAKE_SYSTEM_PROCESSOR_ARCH STREQUAL "x86_64")
-        if (CMAKE_SYSTEM STREQUAL "linux")
+        if (BUILD_SYSTEM_NAME STREQUAL "linux")
             set(QNN_LIBRARIES_COMMON_DIRS ${QNN_LIBRARIES_DIRS}/x86_64-linux-clang)
             set(QNN_LIBRARIES ${QNN_LIBRARIES} libGenie.so libQnnGenAiTransformerComposerQuantizer.so  
                 libQnnGpuProfilingReader.so libQnnHtpQemu.so libQnnLpaiPrepare_v4.so  
@@ -67,7 +67,7 @@ if (QNN_FOUND)
                 libQnnHtp.so  libQnnJsonProfilingReader.so  libQnnLpai.so  libQnnChrometraceProfilingReader.so  
                 libQnnCpu.so  libQnnGenAiTransformerModel.so  libQnnHtpOptraceProfilingReader.so  libQnnHtpProfilingReader.so  
                 libQnnLpaiNetRunExtensions.so  libQnnSaver.so)
-        # elseif (CMAKE_SYSTEM_NAME STREQUAL "windows")
+        # elseif (BUILD_SYSTEM_NAME STREQUAL "windows")
         #     set(QNN_LIBRARIES_DIRS ${QNN_LIBRARIES_DIRS}/x86_64-windows-msvc)
         else()
             message(FATAL_ERROR "Unsupported compiler: ${CMAKE_SYSTEM_PROCESSOR_ARCH}-${CMAKE_SYSTEM}")
@@ -117,7 +117,7 @@ if (QNN_FOUND)
     set(REGISTRY_LIBRARIES "${REGISTER_LIBS};${QNN_LIBRARIES}")
     add_compile_definitions(WITH_QUALCOMM_QNN)
     # 添加qnn源码
-    file(GLOB REGISTER_SRC_FILES ${CMAKE_SOURCE_DIR}/src/registry/devices/qualcomm/qnn/*.cpp)
+    file(GLOB REGISTER_SRC_FILES ${CMAKE_SOURCE_DIR}/src/registry/devices/qualcomm/qnn/*.cc)
 
     # 安装QNN_LIBRARIES_COMMON_DIRS、QNN_LIBRARIES_DSP_DIRS、QNN_INCLUDE_DIRS到安装目录
     # install(DIRECTORY ${QNN_LIBRARIES_COMMON_DIRS} ${QNN_LIBRARIES_DSP_DIRS} DESTINATION ${CMAKE_INSTALL_PREFIX}/third_party/qnn/lib)
@@ -128,7 +128,7 @@ if (QNN_FOUND)
     endif()
     
     message(STATUS "QNN_LIBRARIES_FILES: ${QNN_LIBRARIES_FILES}")
-    install(FILES ${QNN_LIBRARIES_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/third_party/qnn/lib)
+    # install(FILES ${QNN_LIBRARIES_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/third_party/qnn/lib)
     # install(DIRECTORY ${QNN_INCLUDE_DIRS} DESTINATION ${CMAKE_INSTALL_PREFIX}/third_party/qnn/include)
     # install(FILES $ENV{ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so DESTINATION ${CMAKE_INSTALL_PREFIX}/third_party/lib)
 

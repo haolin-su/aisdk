@@ -1,7 +1,7 @@
 #ifndef FIBO_QUALCOMM_DEVICE_H_
 #define FIBO_QUALCOMM_DEVICE_H_
 
-#include "device.h"
+#include "fibo/device.h"
 
 namespace aisdk
 {

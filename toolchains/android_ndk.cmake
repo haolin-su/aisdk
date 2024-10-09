@@ -1,6 +1,6 @@
 # Set the default target platform and ABI
 if(NOT ANDROID_ABI)
-    set(ANDROID_ABI "armeabi-v7a")
+    set(ANDROID_ABI "armeabi-v8a")
 endif()
 
 # Set the default API level if not already set
@@ -10,9 +10,10 @@ endif()
 
 # Set the NDK path
 set(ANDROID_NDK $ENV{ANDROID_NDK_ROOT})
+set(ANDROID_NDK /opt/android-ndk-r26c)
 
 # Set the toolchain and other variables
-set(CMAKE_SYSTEM_NAME android)
+set(BUILD_SYSTEM_NAME android)
 set(CMAKE_SYSTEM_VERSION ${ANDROID_NATIVE_API_LEVEL})
 # set(CMAKE_SYSTEM_PROCESSOR ${ANDROID_ABI})
 

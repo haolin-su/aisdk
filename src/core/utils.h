@@ -39,8 +39,6 @@ typedef struct {
 } TensorShape;
 
 
-
-    
 enum class Layout {
     AISDK_LAYOUT_NCHW,
     AISDK_LAYOUT_NHWC,

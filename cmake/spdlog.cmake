@@ -19,12 +19,12 @@ set(SPDLOG_BUILD_PATH ${CMAKE_BINARY_DIR}/spdlog)
 file(MAKE_DIRECTORY ${SPDLOG_BUILD_PATH})
 
 # 创建spdlog安装目录
-set(SPDLOG_INSTALL_PATH ${CMAKE_SOURCE_DIR}/third_party/spdlog-install-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR_ARCH})
+set(SPDLOG_INSTALL_PATH ${CMAKE_SOURCE_DIR}/third_party/spdlog-install-${BUILD_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR_ARCH})
 file(MAKE_DIRECTORY ${SPDLOG_INSTALL_PATH})
 
 if (NOT EXISTS ${SPDLOG_INSTALL_PATH}/lib/libspdlog.so AND NOT EXISTS ${SPDLOG_INSTALL_PATH}/lib/libspdlog.a)
     # 编译spdlog
-    if (CMAKE_SYSTEM_NAME STREQUAL "android")
+    if (BUILD_SYSTEM_NAME STREQUAL "android")
         message(STATUS "ANDROID_NDK: ${ANDROID_NDK}")
         message(STATUS "ANDROID_ABI: ${ANDROID_ABI}")
         message(STATUS "ANDROID_NATIVE_API_LEVEL: ${ANDROID_NATIVE_API_LEVEL}")
@@ -66,7 +66,7 @@ endif()
 
 # cpm.cmake
 # 配置spdlog
-include_directories(${SPDLOG_INSTALL_PATH}/include/spdlog)
+# include_directories(${SPDLOG_INSTALL_PATH}/include/spdlog)
 include_directories(${SPDLOG_INSTALL_PATH}/include/)
 link_directories(${SPDLOG_INSTALL_PATH}/lib)
 set(SPDLOG_INCLUDE_DIRS ${SPDLOG_INSTALL_PATH}/include/spdlog)
